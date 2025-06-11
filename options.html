@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Font Replacer オプション</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-css-reset/dist/reset.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <style>
+    body { background: #f5f6fa; }
+    .container { max-width: 500px; margin: 2rem auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2rem; }
+    .exclude-list { margin-top: 1rem; }
+    .exclude-list li { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+  </style>
+  <script src="options.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title is-4 has-text-info">Font Replacer オプション</h1>
+    <div class="field">
+      <label class="label">WebフォントURL</label>
+      <div class="control has-icons-left">
+        <input class="input" type="text" id="fontUrl" placeholder="https://example.com/font.woff2">
+        <span class="icon is-small is-left"><i class="fas fa-link"></i></span>
+      </div>
+      <button class="button is-info mt-2" id="saveFontUrl">保存</button>
+    </div>
+    <div class="field mt-5">
+      <label class="label">除外URLリスト</label>
+      <div class="field has-addons">
+        <div class="control is-expanded">
+          <input class="input" type="text" id="excludeUrl" placeholder="https://example.com/">
+        </div>
+        <div class="control">
+          <button class="button is-warning" id="addExcludeUrl">追加</button>
+        </div>
+      </div>
+      <ul class="exclude-list" id="excludeList"></ul>
+    </div>
+  </div>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>

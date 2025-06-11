@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Fontify",
+  "version": "1.0",
+  "description": "現在のサイトのフォントを指定したWebフォントに置換します。",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
