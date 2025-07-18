@@ -82,6 +82,16 @@
       font-size: 0.875rem;
       color: var(--text-secondary);
       margin-top: 0.25rem;
+      line-height: 1.5;
+    }
+
+    .help-text code {
+      background: #f1f5f9;
+      padding: 0.125rem 0.25rem;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      color: #374151;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     }
 
     .input, .textarea {
@@ -218,6 +228,13 @@
       background: #f0fdf4;
       color: var(--success-color);
       border: 1px solid #bbf7d0;
+      display: block;
+    }
+
+    .validation-message.info {
+      background: #eff6ff;
+      color: var(--primary-color);
+      border: 1px solid #bfdbfe;
       display: block;
     }
 
@@ -536,7 +553,7 @@
           </div>
         </div>
         <p class="help-text">
-          現在のフォント設定をプリセットとして保存できます
+          現在のフォント設定をプリセットとして保存できます。プリセットにはフォントURL、除外リスト、フォント調整設定が含まれます。
         </p>
       </div>
     </div>
@@ -558,7 +575,10 @@
         </div>
         <div class="validation-message" id="fontUrlValidation"></div>
         <p class="help-text">
-          Google FontsのURLまたは直接フォントファイル(.woff2, .woff, .ttf, .otf)のURLを入力してください
+          Google FontsのURLまたは直接フォントファイル(.woff2, .woff, .ttf, .otf)のURLを入力してください。<br>
+          <strong>例:</strong><br>
+          • Google Fonts: <code>https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap</code><br>
+          • フォントファイル: <code>https://example.com/fonts/myfont.woff2</code>
         </p>
       </div>
 
@@ -698,7 +718,8 @@
         </div>
         <div class="validation-message" id="excludeUrlValidation"></div>
         <p class="help-text">
-          フォント置換を適用したくないサイトのURLを追加できます
+          フォント置換を適用したくないサイトのURLを追加できます。<br>
+          <strong>例:</strong> <code>https://example.com/</code> - example.comサイト全体を除外
         </p>
       </div>
 

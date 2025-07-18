@@ -243,73 +243,139 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      // Create preview window
-      const previewWindow = window.open('', 'fontPreview', 'width=600,height=400');
-      previewWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>フォントプレビュー - ${extractFontName(fontUrl)}</title>
-          <style>
-            body { 
-              font-family: 'PreviewFont', sans-serif; 
-              padding: 2rem; 
-              line-height: 1.6;
-              background: #f8fafc;
-            }
-            .preview-container {
-              background: white;
-              padding: 2rem;
-              border-radius: 12px;
-              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            h1 { font-size: 2rem; margin-bottom: 1rem; color: #1f2937; }
-            .sizes { display: flex; flex-direction: column; gap: 1rem; }
-            .size-demo { padding: 1rem; background: #f8fafc; border-radius: 8px; }
-            .size-label { font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem; }
-          </style>
-          <link rel="stylesheet" href="${fontUrl}">
-          <style>
-            @font-face {
-              font-family: 'PreviewFont';
-              src: url('${fontUrl}');
-            }
-          </style>
-        </head>
-        <body>
-          <div class="preview-container">
-            <h1>フォントプレビュー</h1>
-            <div class="sizes">
-              <div class="size-demo">
-                <div class="size-label">大見出し (24px)</div>
-                <div style="font-size: 24px;">これはフォントプレビューです</div>
-              </div>
-              <div class="size-demo">
-                <div class="size-label">中見出し (18px)</div>
-                <div style="font-size: 18px;">This is a font preview sample</div>
-              </div>
-              <div class="size-demo">
-                <div class="size-label">本文 (16px)</div>
-                <div style="font-size: 16px;">あいうえおかきくけこABCDEFGHIJKL1234567890</div>
-              </div>
-              <div class="size-demo">
-                <div class="size-label">小文字 (14px)</div>
-                <div style="font-size: 14px;">The quick brown fox jumps over the lazy dog</div>
+      // Validate font URL before opening preview
+      const fontName = extractFontName(fontUrl);
+      
+      // Create preview window with better error handling
+      try {
+        const previewWindow = window.open('', 'fontPreview', 'width=600,height=500,scrollbars=yes,resizable=yes');
+        
+        if (!previewWindow) {
+          toast.error('プレビューウィンドウを開けませんでした。ポップアップブロッカーを確認してください。');
+          return;
+        }
+        
+        previewWindow.document.write(`
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <title>フォントプレビュー - ${fontName}</title>
+            <style>
+              body { 
+                font-family: 'PreviewFont', sans-serif; 
+                padding: 2rem; 
+                line-height: 1.6;
+                background: #f8fafc;
+                margin: 0;
+              }
+              .preview-container {
+                background: white;
+                padding: 2rem;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                max-width: 800px;
+                margin: 0 auto;
+              }
+              .error-message {
+                background: #fee2e2;
+                color: #dc2626;
+                padding: 1rem;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                border: 1px solid #fecaca;
+              }
+              h1 { 
+                font-size: 2rem; 
+                margin-bottom: 1rem; 
+                color: #1f2937;
+                border-bottom: 2px solid #e5e7eb;
+                padding-bottom: 0.5rem;
+              }
+              .sizes { 
+                display: flex; 
+                flex-direction: column; 
+                gap: 1rem; 
+              }
+              .size-demo { 
+                padding: 1rem; 
+                background: #f8fafc; 
+                border-radius: 8px; 
+                border: 1px solid #e5e7eb;
+              }
+              .size-label { 
+                font-size: 0.875rem; 
+                color: #6b7280; 
+                margin-bottom: 0.5rem; 
+                font-weight: 500;
+              }
+              .loading {
+                text-align: center;
+                color: #6b7280;
+                padding: 2rem;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="preview-container">
+              <h1>フォントプレビュー</h1>
+              <div class="loading">フォントを読み込み中...</div>
+              <div class="sizes" style="display: none;">
+                <div class="size-demo">
+                  <div class="size-label">大見出し (24px)</div>
+                  <div style="font-size: 24px; font-weight: 600;">これはフォントプレビューです</div>
+                </div>
+                <div class="size-demo">
+                  <div class="size-label">中見出し (18px)</div>
+                  <div style="font-size: 18px; font-weight: 500;">This is a font preview sample</div>
+                </div>
+                <div class="size-demo">
+                  <div class="size-label">本文 (16px)</div>
+                  <div style="font-size: 16px;">あいうえおかきくけこABCDEFGHIJKL1234567890</div>
+                </div>
+                <div class="size-demo">
+                  <div class="size-label">小文字 (14px)</div>
+                  <div style="font-size: 14px;">The quick brown fox jumps over the lazy dog</div>
+                </div>
+                <div class="size-demo">
+                  <div class="size-label">日本語サンプル</div>
+                  <div style="font-size: 16px;">吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。</div>
+                </div>
               </div>
             </div>
-          </div>
-        </body>
-        </html>
-      `);
-      previewWindow.document.close();
-      
-      toast.success('プレビューウィンドウを開きました');
+            
+            <script>
+              // Load font and show content
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = '${fontUrl}';
+              link.onload = function() {
+                setTimeout(() => {
+                  document.querySelector('.loading').style.display = 'none';
+                  document.querySelector('.sizes').style.display = 'flex';
+                }, 500);
+              };
+              link.onerror = function() {
+                document.querySelector('.loading').innerHTML = 
+                  '<div class="error-message">フォントの読み込みに失敗しました。URLを確認してください。</div>';
+              };
+              document.head.appendChild(link);
+            </script>
+          </body>
+          </html>
+        `);
+        previewWindow.document.close();
+        
+        toast.success('プレビューウィンドウを開きました');
+        
+      } catch (windowError) {
+        console.error('Error creating preview window:', windowError);
+        toast.error('プレビューウィンドウの作成に失敗しました');
+      }
       
     } catch (error) {
-      console.error('Error opening preview:', error);
-      toast.error('プレビューの表示に失敗しました');
+      console.error('Error in preview function:', error);
+      toast.error('プレビューの表示に失敗しました: ' + error.message);
     } finally {
       LoadingManager.setLoading(previewButton, false);
     }

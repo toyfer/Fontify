@@ -29,18 +29,43 @@ browser.runtime.onInstalled.addListener((details) => {
 async function migrateSettings() {
   try {
     const storage = await browser.storage.local.get();
+    let needsUpdate = false;
+    const updates = {};
     
     // Add font presets if not exists
     if (!storage.fontPresets) {
-      await browser.storage.local.set({ fontPresets: [] });
+      updates.fontPresets = [];
+      needsUpdate = true;
     }
     
     // Add activePreset if not exists
     if (!storage.activePreset) {
-      await browser.storage.local.set({ activePreset: null });
+      updates.activePreset = null;
+      needsUpdate = true;
     }
     
-    console.log('Settings migration completed');
+    // Add font adjustments if not exists
+    if (storage.fontSizeScale === undefined) {
+      updates.fontSizeScale = 1.0;
+      needsUpdate = true;
+    }
+    
+    if (!storage.fontWeight) {
+      updates.fontWeight = 'normal';
+      needsUpdate = true;
+    }
+    
+    if (storage.lineHeight === undefined) {
+      updates.lineHeight = 1.5;
+      needsUpdate = true;
+    }
+    
+    if (needsUpdate) {
+      await browser.storage.local.set(updates);
+      console.log('Settings migration completed:', updates);
+    } else {
+      console.log('No migration needed');
+    }
   } catch (error) {
     console.error('Error migrating settings:', error);
   }

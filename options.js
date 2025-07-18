@@ -76,25 +76,66 @@ class ValidationUtils {
     }
   }
 
-  static isValidFontUrl(url) {
-    if (!this.isValidUrl(url)) return false;
+  static async isValidFontUrl(url) {
+    if (!this.isValidUrl(url)) return { valid: false, error: 'URLの形式が正しくありません' };
     
     // Google Fonts check
     if (url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) {
-      return true;
+      return await this.testGoogleFontsUrl(url);
     }
     
     // Font file check
     if (url.match(/\.(woff2?|ttf|otf|eot)(\?.*)?$/i)) {
-      return true;
+      return await this.testFontFileUrl(url);
     }
     
     // CSS file check
     if (url.match(/\.css(\?.*)?$/i)) {
-      return true;
+      return await this.testCssUrl(url);
     }
     
-    return false;
+    return { valid: false, error: 'サポートされていないファイル形式です。.woff, .woff2, .ttf, .otf, .css またはGoogle FontsのURLを使用してください。' };
+  }
+
+  static async testGoogleFontsUrl(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+      return { valid: true };
+    } catch (error) {
+      return { valid: false, error: 'Google Fontsへの接続に失敗しました。URLを確認してください。' };
+    }
+  }
+
+  static async testFontFileUrl(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && (contentType.includes('font') || contentType.includes('application/octet-stream'))) {
+          return { valid: true };
+        }
+        return { valid: false, error: 'ファイルがフォント形式ではないようです。' };
+      }
+      return { valid: false, error: `フォントファイルの読み込みに失敗しました (${response.status})` };
+    } catch (error) {
+      return { valid: false, error: 'フォントファイルにアクセスできません。URLを確認してください。' };
+    }
+  }
+
+  static async testCssUrl(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/css')) {
+          return { valid: true };
+        }
+        return { valid: false, error: 'ファイルがCSS形式ではないようです。' };
+      }
+      return { valid: false, error: `CSSファイルの読み込みに失敗しました (${response.status})` };
+    } catch (error) {
+      return { valid: false, error: 'CSSファイルにアクセスできません。URLを確認してください。' };
+    }
   }
 
   static showValidation(elementId, message, type) {
@@ -239,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Validate font URL
-  function validateFontUrl() {
+  async function validateFontUrl() {
     const url = fontUrlInput.value.trim();
     
     if (!url) {
@@ -247,21 +288,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       return false;
     }
     
-    if (!ValidationUtils.isValidFontUrl(url)) {
+    // Show loading state
+    ValidationUtils.showValidation(
+      'fontUrlValidation',
+      '検証中...',
+      'info'
+    );
+    
+    try {
+      const result = await ValidationUtils.isValidFontUrl(url);
+      
+      if (!result.valid) {
+        ValidationUtils.showValidation(
+          'fontUrlValidation',
+          result.error,
+          'error'
+        );
+        return false;
+      }
+      
       ValidationUtils.showValidation(
         'fontUrlValidation',
-        '有効なフォントURLまたはGoogle FontsのURLを入力してください',
+        '有効なフォントURLです',
+        'success'
+      );
+      return true;
+    } catch (error) {
+      ValidationUtils.showValidation(
+        'fontUrlValidation',
+        'URL検証中にエラーが発生しました',
         'error'
       );
       return false;
     }
-    
-    ValidationUtils.showValidation(
-      'fontUrlValidation',
-      '有効なフォントURLです',
-      'success'
-    );
-    return true;
   }
 
   // Validate exclude URL
@@ -302,7 +361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      if (!validateFontUrl()) {
+      const isValid = await validateFontUrl();
+      if (!isValid) {
         toast.error('有効なフォントURLを入力してください');
         return;
       }
@@ -322,7 +382,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
     } catch (error) {
       console.error('Error saving font URL:', error);
-      toast.error('フォント設定の保存に失敗しました');
+      toast.error('フォント設定の保存に失敗しました: ' + error.message);
     } finally {
       LoadingManager.setLoading(saveFontUrlBtn, false);
     }
@@ -337,13 +397,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    if (!validateFontUrl()) {
+    const isValid = await validateFontUrl();
+    if (!isValid) {
       toast.error('有効なフォントURLを入力してください');
       return;
     }
     
-    updatePreview(url);
-    toast.success('プレビューを更新しました');
+    try {
+      updatePreview(url);
+      toast.success('プレビューを更新しました');
+    } catch (error) {
+      console.error('Error updating preview:', error);
+      toast.error('プレビューの更新に失敗しました');
+    }
   }
 
   // Update font preview
@@ -633,7 +699,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      if (!validateFontUrl()) {
+      const isValid = await validateFontUrl();
+      if (!isValid) {
         toast.error('有効なフォントURLを入力してください');
         return;
       }
@@ -674,7 +741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
     } catch (error) {
       console.error('Error saving preset:', error);
-      toast.error('プリセットの保存に失敗しました');
+      toast.error('プリセットの保存に失敗しました: ' + error.message);
     } finally {
       LoadingManager.setLoading(savePresetBtn, false);
     }
