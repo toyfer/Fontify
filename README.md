@@ -21,3 +21,9 @@ Fontifyは、現在開いているWebサイトのフォントを指定したWeb�
 
 ## ライセンス
 MIT License（LICENSEファイル参照）
+
+## 開発ドキュメント
+- [UI/UX改善計画](UI_UX_IMPROVEMENT_PLAN.md) - 包括的な改善計画とロードマップ
+- [UI/UX Improvement Plan (English)](UI_UX_IMPROVEMENT_PLAN.en.md) - English version of the improvement plan
+- [実装チェックリスト](IMPLEMENTATION_CHECKLIST.md) - 進捗管理用のタスクリスト
+- [UIモックアップ](UI_MOCKUPS.md) - 改善後のUI設計案と仕様
