@@ -236,6 +236,35 @@
       font-size: 0.875rem;
       color: var(--text-primary);
     }
+
+    .preset-selector {
+      margin-bottom: 0.75rem;
+    }
+
+    .preset-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+
+    .preset-dropdown {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: var(--surface-color);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .preset-dropdown:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
   </style>
   <script src="popup.js"></script>
 </head>
@@ -263,6 +292,10 @@
         <span class="status-value" id="currentFont">未設定</span>
       </div>
       <div class="status-row">
+        <span class="status-label">アクティブプリセット</span>
+        <span class="status-value" id="activePreset">なし</span>
+      </div>
+      <div class="status-row">
         <span class="status-label">このページの状態</span>
         <span class="status-value" id="pageStatus">確認中...</span>
       </div>
@@ -270,6 +303,14 @@
 
     <!-- Quick Controls -->
     <div class="quick-controls">
+      <!-- Preset Selector -->
+      <div class="preset-selector" id="presetSelector" style="display: none;">
+        <label class="preset-label">プリセット選択</label>
+        <select class="preset-dropdown" id="presetDropdown">
+          <option value="">プリセットを選択...</option>
+        </select>
+      </div>
+      
       <button class="control-button btn-primary" id="toggleFont" disabled>
         <span id="toggleText">一時無効化</span>
       </button>

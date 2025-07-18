@@ -73,12 +73,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const fontStatus = document.getElementById('fontStatus');
   const statusIndicator = document.getElementById('statusIndicator');
   const currentFont = document.getElementById('currentFont');
+  const activePreset = document.getElementById('activePreset');
   const pageStatus = document.getElementById('pageStatus');
   const toggleButton = document.getElementById('toggleFont');
   const toggleText = document.getElementById('toggleText');
   const previewButton = document.getElementById('previewFont');
   const excludeButton = document.getElementById('addCurrentToExclude');
   const optionsButton = document.getElementById('openOptions');
+  const presetSelector = document.getElementById('presetSelector');
+  const presetDropdown = document.getElementById('presetDropdown');
 
   // Get current tab
   let currentTab;
@@ -98,14 +101,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   previewButton.onclick = handlePreviewFont;
   excludeButton.onclick = handleAddToExclude;
   optionsButton.onclick = handleOpenOptions;
+  presetDropdown.onchange = handlePresetChange;
 
   // Load and display current status
   async function loadStatus() {
     try {
-      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls', 'isEnabled']);
+      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls', 'isEnabled', 'fontPresets', 'activePreset']);
       const fontUrl = storage.fontUrl || '';
       const excludeUrls = storage.excludeUrls || [];
       const isEnabled = storage.isEnabled !== false; // Default to true
+      const fontPresets = storage.fontPresets || [];
+      const activePresetName = storage.activePreset || null;
       
       // Update font status
       if (fontUrl) {
@@ -120,6 +126,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusIndicator.className = 'status-indicator status-inactive';
         currentFont.textContent = '未設定';
       }
+
+      // Update active preset display
+      activePreset.textContent = activePresetName || 'なし';
 
       // Update page status
       if (currentTab?.url) {
@@ -139,6 +148,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Update toggle button
       updateToggleButton(isEnabled, fontUrl);
+      
+      // Update preset selector
+      updatePresetSelector(fontPresets, activePresetName);
       
     } catch (error) {
       console.error('Error loading status:', error);
@@ -349,6 +361,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       console.error('Error opening options:', error);
       toast.error('設定ページの表示に失敗しました');
+    }
+  }
+
+  // Update preset selector
+  function updatePresetSelector(presets, activePresetName) {
+    // Clear existing options
+    presetDropdown.innerHTML = '<option value="">プリセットを選択...</option>';
+    
+    if (presets.length === 0) {
+      presetSelector.style.display = 'none';
+      return;
+    }
+    
+    // Show preset selector
+    presetSelector.style.display = 'block';
+    
+    // Add preset options
+    presets.forEach(preset => {
+      const option = document.createElement('option');
+      option.value = preset.name;
+      option.textContent = preset.name;
+      if (preset.name === activePresetName) {
+        option.selected = true;
+      }
+      presetDropdown.appendChild(option);
+    });
+  }
+
+  // Handle preset change
+  async function handlePresetChange() {
+    const selectedPresetName = presetDropdown.value;
+    
+    if (!selectedPresetName) return;
+    
+    LoadingManager.setLoading(presetDropdown, true);
+    
+    try {
+      const storage = await browser.storage.local.get('fontPresets');
+      const presets = storage.fontPresets || [];
+      const selectedPreset = presets.find(p => p.name === selectedPresetName);
+      
+      if (!selectedPreset) {
+        toast.error('選択されたプリセットが見つかりません');
+        return;
+      }
+      
+      // Send message to background script to apply preset
+      try {
+        await browser.runtime.sendMessage({
+          type: 'APPLY_FONT_PRESET',
+          preset: selectedPreset
+        });
+        
+        toast.success(`プリセット "${selectedPreset.name}" を適用しました`);
+        
+        // Reload status after a short delay
+        setTimeout(() => {
+          loadStatus();
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error sending message to background:', error);
+        toast.error('プリセットの適用に失敗しました');
+      }
+      
+    } catch (error) {
+      console.error('Error applying preset:', error);
+      toast.error('プリセットの適用に失敗しました');
+    } finally {
+      LoadingManager.setLoading(presetDropdown, false);
     }
   }
 });

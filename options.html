@@ -311,6 +311,88 @@
       color: var(--text-secondary);
       font-size: 0.875rem;
     }
+
+    .preset-list {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+
+    .preset-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s ease;
+    }
+
+    .preset-item:hover {
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    }
+
+    .preset-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .preset-item.active {
+      border-color: var(--success-color);
+      background: #f0fdf4;
+    }
+
+    .preset-info {
+      flex: 1;
+    }
+
+    .preset-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .preset-url {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      word-break: break-all;
+    }
+
+    .preset-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .preset-button {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .preset-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .preset-button.apply {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .preset-button.delete {
+      background: var(--error-color);
+      color: white;
+    }
   </style>
   <script src="options.js"></script>
 </head>
@@ -320,6 +402,41 @@
     <div class="header">
       <div class="logo-icon">F</div>
       <h1 class="title is-4" style="margin: 0;">Fontify オプション</h1>
+    </div>
+
+    <!-- Font Presets Section -->
+    <div class="section">
+      <h2 class="section-title">
+        <span>⭐</span>
+        フォントプリセット
+      </h2>
+      
+      <div class="field">
+        <label class="label">保存済みプリセット</label>
+        <div class="preset-list" id="presetList">
+          <div class="empty-state" id="presetEmptyState">
+            プリセットはまだ保存されていません
+          </div>
+        </div>
+      </div>
+      
+      <div class="field">
+        <label class="label">新しいプリセット名</label>
+        <div class="field has-addons">
+          <div class="control is-expanded">
+            <input class="input" type="text" id="presetName" placeholder="例: ゴシック体">
+          </div>
+          <div class="control">
+            <button class="button is-success" id="savePreset">
+              <span>💾</span>
+              プリセット保存
+            </button>
+          </div>
+        </div>
+        <p class="help-text">
+          現在のフォント設定をプリセットとして保存できます
+        </p>
+      </div>
     </div>
 
     <!-- Font Configuration Section -->

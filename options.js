@@ -144,6 +144,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const exportSettingsBtn = document.getElementById('exportSettings');
   const importSettingsBtn = document.getElementById('importSettings');
   const importFile = document.getElementById('importFile');
+  
+  // Preset management elements
+  const presetList = document.getElementById('presetList');
+  const presetEmptyState = document.getElementById('presetEmptyState');
+  const presetNameInput = document.getElementById('presetName');
+  const savePresetBtn = document.getElementById('savePreset');
 
   // Load initial data
   await loadSettings();
@@ -158,6 +164,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   exportSettingsBtn.addEventListener('click', handleExportSettings);
   importSettingsBtn.addEventListener('click', () => importFile.click());
   importFile.addEventListener('change', handleImportSettings);
+  
+  // Preset management event handlers
+  savePresetBtn.addEventListener('click', handleSavePreset);
+  presetNameInput.addEventListener('input', validatePresetName);
 
   // Enter key handlers
   fontUrlInput.addEventListener('keypress', (e) => {
@@ -166,11 +176,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   excludeUrlInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleAddExcludeUrl();
   });
+  presetNameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleSavePreset();
+  });
 
   // Load settings from storage
   async function loadSettings() {
     try {
-      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls']);
+      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls', 'fontPresets', 'activePreset']);
       
       fontUrlInput.value = storage.fontUrl || '';
       if (storage.fontUrl) {
@@ -180,6 +193,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       const excludeUrls = storage.excludeUrls || [];
       renderExcludeList(excludeUrls);
+      
+      const fontPresets = storage.fontPresets || [];
+      renderPresetList(fontPresets, storage.activePreset);
       
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -451,13 +467,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     LoadingManager.setLoading(exportSettingsBtn, true);
     
     try {
-      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls', 'isEnabled']);
+      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls', 'isEnabled', 'fontPresets', 'activePreset']);
       const settings = {
         fontUrl: storage.fontUrl || '',
         excludeUrls: storage.excludeUrls || [],
         isEnabled: storage.isEnabled !== false,
+        fontPresets: storage.fontPresets || [],
+        activePreset: storage.activePreset || null,
         exportDate: new Date().toISOString(),
-        version: '1.0'
+        version: '1.1'
       };
       
       const blob = new Blob([JSON.stringify(settings, null, 2)], {
@@ -504,6 +522,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (settings.fontUrl) importData.fontUrl = settings.fontUrl;
       if (settings.excludeUrls) importData.excludeUrls = settings.excludeUrls;
       if (typeof settings.isEnabled === 'boolean') importData.isEnabled = settings.isEnabled;
+      if (settings.fontPresets) importData.fontPresets = settings.fontPresets;
+      if (settings.activePreset) importData.activePreset = settings.activePreset;
       
       await browser.storage.local.set(importData);
       await loadSettings();
@@ -517,6 +537,208 @@ document.addEventListener('DOMContentLoaded', async () => {
       LoadingManager.setLoading(importSettingsBtn, false);
       // Reset file input
       event.target.value = '';
+    }
+  }
+
+  // Validate preset name
+  function validatePresetName() {
+    const name = presetNameInput.value.trim();
+    
+    if (!name) {
+      savePresetBtn.disabled = true;
+      return false;
+    }
+    
+    savePresetBtn.disabled = false;
+    return true;
+  }
+
+  // Handle save preset
+  async function handleSavePreset() {
+    LoadingManager.setLoading(savePresetBtn, true);
+    
+    try {
+      const name = presetNameInput.value.trim();
+      const fontUrl = fontUrlInput.value.trim();
+      
+      if (!name) {
+        toast.warning('プリセット名を入力してください');
+        return;
+      }
+      
+      if (!fontUrl) {
+        toast.warning('保存するフォントURLを設定してください');
+        return;
+      }
+      
+      if (!validateFontUrl()) {
+        toast.error('有効なフォントURLを入力してください');
+        return;
+      }
+      
+      const storage = await browser.storage.local.get(['fontPresets', 'excludeUrls']);
+      const presets = storage.fontPresets || [];
+      const excludeUrls = storage.excludeUrls || [];
+      
+      // Check if preset name already exists
+      const existingIndex = presets.findIndex(p => p.name === name);
+      
+      const newPreset = {
+        name: name,
+        fontUrl: fontUrl,
+        excludeUrls: [...excludeUrls], // Copy current exclude URLs
+        createdAt: new Date().toISOString()
+      };
+      
+      if (existingIndex >= 0) {
+        // Update existing preset
+        presets[existingIndex] = { ...presets[existingIndex], ...newPreset };
+        toast.success(`プリセット "${name}" を更新しました`);
+      } else {
+        // Add new preset
+        presets.push(newPreset);
+        toast.success(`プリセット "${name}" を保存しました`);
+      }
+      
+      await browser.storage.local.set({ fontPresets: presets });
+      
+      // Clear input and reload preset list
+      presetNameInput.value = '';
+      validatePresetName();
+      renderPresetList(presets);
+      
+    } catch (error) {
+      console.error('Error saving preset:', error);
+      toast.error('プリセットの保存に失敗しました');
+    } finally {
+      LoadingManager.setLoading(savePresetBtn, false);
+    }
+  }
+
+  // Render preset list
+  function renderPresetList(presets, activePreset = null) {
+    presetList.innerHTML = '';
+    
+    if (presets.length === 0) {
+      presetList.appendChild(presetEmptyState);
+      return;
+    }
+    
+    presets.forEach((preset, index) => {
+      const item = document.createElement('div');
+      item.className = `preset-item ${preset.name === activePreset ? 'active' : ''}`;
+      
+      const info = document.createElement('div');
+      info.className = 'preset-info';
+      
+      const name = document.createElement('div');
+      name.className = 'preset-name';
+      name.textContent = preset.name;
+      
+      const url = document.createElement('div');
+      url.className = 'preset-url';
+      url.textContent = preset.fontUrl;
+      
+      info.appendChild(name);
+      info.appendChild(url);
+      
+      const actions = document.createElement('div');
+      actions.className = 'preset-actions';
+      
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'preset-button apply';
+      applyBtn.innerHTML = '<span>✓</span> 適用';
+      applyBtn.onclick = () => handleApplyPreset(preset);
+      
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'preset-button delete';
+      deleteBtn.innerHTML = '<span>🗑️</span> 削除';
+      deleteBtn.onclick = () => handleDeletePreset(index);
+      
+      actions.appendChild(applyBtn);
+      actions.appendChild(deleteBtn);
+      
+      item.appendChild(info);
+      item.appendChild(actions);
+      presetList.appendChild(item);
+    });
+  }
+
+  // Handle apply preset
+  async function handleApplyPreset(preset) {
+    LoadingManager.setLoading(savePresetBtn, true);
+    
+    try {
+      // Update current settings with preset values
+      fontUrlInput.value = preset.fontUrl;
+      validateFontUrl();
+      updatePreview(preset.fontUrl);
+      
+      // Save to storage
+      await browser.storage.local.set({
+        fontUrl: preset.fontUrl,
+        excludeUrls: preset.excludeUrls || [],
+        activePreset: preset.name
+      });
+      
+      // Reload exclude list
+      renderExcludeList(preset.excludeUrls || []);
+      
+      // Send message to background script to apply preset
+      try {
+        await browser.runtime.sendMessage({
+          type: 'APPLY_FONT_PRESET',
+          preset: preset
+        });
+      } catch (error) {
+        console.error('Error sending message to background:', error);
+      }
+      
+      // Reload preset list to show active state
+      const storage = await browser.storage.local.get('fontPresets');
+      renderPresetList(storage.fontPresets || [], preset.name);
+      
+      toast.success(`プリセット "${preset.name}" を適用しました`);
+      
+    } catch (error) {
+      console.error('Error applying preset:', error);
+      toast.error('プリセットの適用に失敗しました');
+    } finally {
+      LoadingManager.setLoading(savePresetBtn, false);
+    }
+  }
+
+  // Handle delete preset
+  async function handleDeletePreset(index) {
+    try {
+      const storage = await browser.storage.local.get(['fontPresets', 'activePreset']);
+      const presets = storage.fontPresets || [];
+      
+      if (index < 0 || index >= presets.length) return;
+      
+      const deletedPreset = presets[index];
+      const isActive = storage.activePreset === deletedPreset.name;
+      
+      // Remove preset
+      presets.splice(index, 1);
+      
+      const updateData = { fontPresets: presets };
+      
+      // If deleted preset was active, clear active preset
+      if (isActive) {
+        updateData.activePreset = null;
+      }
+      
+      await browser.storage.local.set(updateData);
+      
+      // Re-render list
+      renderPresetList(presets, isActive ? null : storage.activePreset);
+      
+      toast.success(`プリセット "${deletedPreset.name}" を削除しました`);
+      
+    } catch (error) {
+      console.error('Error deleting preset:', error);
+      toast.error('プリセットの削除に失敗しました');
     }
   }
 });
