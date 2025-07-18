@@ -19,5 +19,9 @@ Fontifyは、現在開いているWebサイトのフォントを指定したWeb�
 - Google Chrome（Manifest V3対応）
 - Mozilla Firefox（Manifest V3対応）
 
+## 今後の開発計画
+- [機能追加ロードマップ](FEATURE_ROADMAP.md) - 詳細な機能計画
+- [開発計画書](DEVELOPMENT_PLAN.md) - 具体的な実装スケジュール
+
 ## ライセンス
 MIT License（LICENSEファイル参照）
