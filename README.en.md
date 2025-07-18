@@ -23,5 +23,11 @@ Fontify is a Chrome/Firefox extension that allows you to replace the fonts of an
 - [Feature Roadmap](FEATURE_ROADMAP.en.md) - Detailed feature planning
 - [Development Plan](DEVELOPMENT_PLAN.md) - Specific implementation schedule
 
+## Development Documentation
+- [UI/UX Improvement Plan](UI_UX_IMPROVEMENT_PLAN.en.md) - Comprehensive improvement plan and roadmap
+- [UI/UX改善計画 (日本語)](UI_UX_IMPROVEMENT_PLAN.md) - Japanese version of the improvement plan
+- [Implementation Checklist](IMPLEMENTATION_CHECKLIST.md) - Task list for progress tracking
+- [UI Mockups](UI_MOCKUPS.md) - Design specifications and improved UI layouts
+
 ## License
 MIT License (see LICENSE file)

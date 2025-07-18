@@ -3,14 +3,18 @@ if (typeof browser === 'undefined') {
   var browser = chrome;
 }
 
-// ...ページ内のフォントを置換するスクリプト...
+// ページ内のフォントを置換するスクリプト
 
 // ストレージからWebフォントURLと除外リストを取得し、除外対象でなければフォントを適用
 (async function() {
   const url = location.href;
-  const storage = await browser.storage.local.get(["fontUrl", "excludeUrls"]);
+  const storage = await browser.storage.local.get(["fontUrl", "excludeUrls", "isEnabled"]);
   const fontUrl = storage.fontUrl || "";
   const excludeUrls = storage.excludeUrls || [];
+  const isEnabled = storage.isEnabled !== false; // Default to true
+
+  // フォントが無効化されている場合は何もしない
+  if (!isEnabled) return;
 
   // 除外URLに一致する場合は何もしない
   if (excludeUrls.some(ex => url.startsWith(ex))) return;
@@ -37,6 +41,7 @@ if (typeof browser === 'undefined') {
             reader.readAsDataURL(blob);
           });
         } catch (e) {
+          console.error('Font loading error:', e);
           return null;
         }
       }
@@ -48,21 +53,80 @@ if (typeof browser === 'undefined') {
       fontDataUrl = await getCachedFontDataUrl(fontUrl);
     }
 
-    if (fontDataUrl) {
-      // @font-faceでDataURLを使う
+    // フォント適用の関数
+    function applyFont() {
+      // 既存のスタイルを削除
+      const existingStyle = document.getElementById('fontify-custom-font');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+
       const style = document.createElement("style");
-      style.textContent = `@font-face { font-family: 'CustomFont'; src: url('${fontDataUrl}'); }
-* { font-family: 'CustomFont', sans-serif !important; }`;
-      document.head.appendChild(style);
-    } else {
-      // 通常のlink参照
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = fontUrl;
-      document.head.appendChild(link);
-      const style = document.createElement("style");
-      style.textContent = `* { font-family: 'CustomFont', sans-serif !important; }`;
+      style.id = 'fontify-custom-font';
+      
+      if (fontDataUrl) {
+        // @font-faceでDataURLを使う
+        style.textContent = `
+          @font-face { 
+            font-family: 'FontifyCustomFont'; 
+            src: url('${fontDataUrl}'); 
+            font-display: swap;
+          }
+          * { 
+            font-family: 'FontifyCustomFont', sans-serif !important; 
+          }
+        `;
+      } else {
+        // 通常のlink参照
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = fontUrl;
+        link.id = 'fontify-custom-link';
+        document.head.appendChild(link);
+        
+        style.textContent = `
+          * { 
+            font-family: 'FontifyCustomFont', sans-serif !important; 
+          }
+        `;
+      }
+      
       document.head.appendChild(style);
     }
+
+    // DOM ready状態チェック
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyFont);
+    } else {
+      applyFont();
+    }
+
+    // 動的に追加される要素にも対応
+    const observer = new MutationObserver((mutations) => {
+      let shouldReapply = false;
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          shouldReapply = true;
+        }
+      });
+      
+      if (shouldReapply) {
+        // デバウンス処理で頻繁な再適用を防ぐ
+        clearTimeout(window.fontifyReapplyTimeout);
+        window.fontifyReapplyTimeout = setTimeout(() => {
+          // 新しく追加された要素に対してフォントを再適用
+          const existingStyle = document.getElementById('fontify-custom-font');
+          if (existingStyle) {
+            existingStyle.remove();
+            applyFont();
+          }
+        }, 100);
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
   }
 })();

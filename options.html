@@ -2,41 +2,429 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Font Replacer オプション</title>
+  <title>Fontify オプション</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-css-reset/dist/reset.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
   <style>
-    body { background: #f5f6fa; }
-    .container { max-width: 500px; margin: 2rem auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2rem; }
-    .exclude-list { margin-top: 1rem; }
-    .exclude-list li { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+    :root {
+      --primary-color: #3b82f6;
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --error-color: #ef4444;
+      --background-color: #f8fafc;
+      --surface-color: #ffffff;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+    }
+
+    body { 
+      background: var(--background-color); 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .container { 
+      max-width: 800px; 
+      margin: 2rem auto; 
+      background: var(--surface-color); 
+      border-radius: 12px; 
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+      padding: 2rem; 
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .field {
+      margin-bottom: 1.5rem;
+    }
+
+    .label {
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .help-text {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+    }
+
+    .input, .textarea {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 0.875rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input:focus, .textarea:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      outline: none;
+    }
+
+    .input.is-danger {
+      border-color: var(--error-color);
+    }
+
+    .input.is-success {
+      border-color: var(--success-color);
+    }
+
+    .button {
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .button.is-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .button.is-warning {
+      background: var(--warning-color);
+      color: white;
+    }
+
+    .button.is-danger {
+      background: var(--error-color);
+      color: white;
+    }
+
+    .button.is-secondary {
+      background: var(--surface-color);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .loading::after {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 0.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .exclude-list {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .exclude-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .exclude-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .exclude-url {
+      flex: 1;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      word-break: break-all;
+    }
+
+    .validation-message {
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+      padding: 0.5rem;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .validation-message.error {
+      background: #fef2f2;
+      color: var(--error-color);
+      border: 1px solid #fecaca;
+      display: block;
+    }
+
+    .validation-message.success {
+      background: #f0fdf4;
+      color: var(--success-color);
+      border: 1px solid #bbf7d0;
+      display: block;
+    }
+
+    .preview-section {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .preview-text {
+      font-size: 1.125rem;
+      line-height: 1.6;
+      color: var(--text-primary);
+      padding: 1rem;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      padding: 1rem 1.5rem;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      max-width: 400px;
+      min-width: 300px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--success-color);
+    }
+
+    .toast.warning {
+      border-left: 4px solid var(--warning-color);
+    }
+
+    .toast.error {
+      border-left: 4px solid var(--error-color);
+    }
+
+    .toast-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .toast.success .toast-icon { background: var(--success-color); }
+    .toast.warning .toast-icon { background: var(--warning-color); }
+    .toast.error .toast-icon { background: var(--error-color); }
+
+    .toast-message {
+      flex: 1;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
   </style>
   <script src="options.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1 class="title is-4 has-text-info">Font Replacer オプション</h1>
-    <div class="field">
-      <label class="label">WebフォントURL</label>
-      <div class="control has-icons-left">
-        <input class="input" type="text" id="fontUrl" placeholder="https://example.com/font.woff2">
-        <span class="icon is-small is-left"><i class="fas fa-link"></i></span>
-      </div>
-      <button class="button is-info mt-2" id="saveFontUrl">保存</button>
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-icon">F</div>
+      <h1 class="title is-4" style="margin: 0;">Fontify オプション</h1>
     </div>
-    <div class="field mt-5">
-      <label class="label">除外URLリスト</label>
-      <div class="field has-addons">
-        <div class="control is-expanded">
-          <input class="input" type="text" id="excludeUrl" placeholder="https://example.com/">
+
+    <!-- Font Configuration Section -->
+    <div class="section">
+      <h2 class="section-title">
+        <span>🎨</span>
+        フォント設定
+      </h2>
+      
+      <div class="field">
+        <label class="label">WebフォントURL</label>
+        <div class="control has-icons-left">
+          <input class="input" type="text" id="fontUrl" placeholder="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap">
+          <span class="icon is-small is-left">
+            <i class="fas fa-link"></i>
+          </span>
         </div>
-        <div class="control">
-          <button class="button is-warning" id="addExcludeUrl">追加</button>
+        <div class="validation-message" id="fontUrlValidation"></div>
+        <p class="help-text">
+          Google FontsのURLまたは直接フォントファイル(.woff2, .woff, .ttf, .otf)のURLを入力してください
+        </p>
+      </div>
+
+      <div class="field">
+        <button class="button is-primary" id="saveFontUrl">
+          <span>💾</span>
+          フォント設定を保存
+        </button>
+        <button class="button is-secondary" id="previewFont" style="margin-left: 0.5rem;">
+          <span>👀</span>
+          プレビュー表示
+        </button>
+      </div>
+
+      <!-- Font Preview Section -->
+      <div class="preview-section" id="previewSection" style="display: none;">
+        <h3 style="margin-bottom: 1rem; font-weight: 600;">フォントプレビュー</h3>
+        <div class="preview-text" id="previewText">
+          これはフォントプレビューです。This is a font preview sample. あいうえお ABCDE 12345
         </div>
       </div>
-      <ul class="exclude-list" id="excludeList"></ul>
+    </div>
+
+    <!-- Exclusion List Section -->
+    <div class="section">
+      <h2 class="section-title">
+        <span>🚫</span>
+        除外URLリスト
+      </h2>
+      
+      <div class="field">
+        <label class="label">除外するURL</label>
+        <div class="field has-addons">
+          <div class="control is-expanded">
+            <input class="input" type="text" id="excludeUrl" placeholder="https://example.com/">
+          </div>
+          <div class="control">
+            <button class="button is-warning" id="addExcludeUrl">
+              <span>➕</span>
+              追加
+            </button>
+          </div>
+        </div>
+        <div class="validation-message" id="excludeUrlValidation"></div>
+        <p class="help-text">
+          フォント置換を適用したくないサイトのURLを追加できます
+        </p>
+      </div>
+
+      <div class="exclude-list" id="excludeList">
+        <div class="empty-state" id="emptyState">
+          除外URLはまだ登録されていません
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Settings Section -->
+    <div class="section">
+      <h2 class="section-title">
+        <span>⚙️</span>
+        詳細設定
+      </h2>
+      
+      <div class="field">
+        <button class="button is-secondary" id="clearCache">
+          <span>🗑️</span>
+          フォントキャッシュをクリア
+        </button>
+        <button class="button is-secondary" id="exportSettings" style="margin-left: 0.5rem;">
+          <span>📤</span>
+          設定をエクスポート
+        </button>
+        <button class="button is-secondary" id="importSettings" style="margin-left: 0.5rem;">
+          <span>📥</span>
+          設定をインポート
+        </button>
+      </div>
+      
+      <input type="file" id="importFile" accept=".json" style="display: none;">
     </div>
   </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
   <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
