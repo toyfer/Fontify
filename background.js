@@ -93,12 +93,19 @@ async function handleReloadTab(tabId, sendResponse) {
 // Apply font preset across all relevant tabs
 async function handleApplyFontPreset(preset, sendResponse) {
   try {
-    // Update storage with new active preset
-    await browser.storage.local.set({
+    // Update storage with new active preset and adjustments
+    const updateData = {
       fontUrl: preset.fontUrl,
       activePreset: preset.name,
       isEnabled: true
-    });
+    };
+    
+    // Include font adjustments if they exist
+    if (preset.fontSizeScale !== undefined) updateData.fontSizeScale = preset.fontSizeScale;
+    if (preset.fontWeight !== undefined) updateData.fontWeight = preset.fontWeight;
+    if (preset.lineHeight !== undefined) updateData.lineHeight = preset.lineHeight;
+    
+    await browser.storage.local.set(updateData);
     
     // Notify all content scripts to update font
     const tabs = await browser.tabs.query({});

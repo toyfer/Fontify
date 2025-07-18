@@ -8,10 +8,15 @@ if (typeof browser === 'undefined') {
 // ストレージからWebフォントURLと除外リストを取得し、除外対象でなければフォントを適用
 (async function() {
   const url = location.href;
-  const storage = await browser.storage.local.get(["fontUrl", "excludeUrls", "isEnabled"]);
+  const storage = await browser.storage.local.get([
+    "fontUrl", "excludeUrls", "isEnabled", "fontSizeScale", "fontWeight", "lineHeight"
+  ]);
   const fontUrl = storage.fontUrl || "";
   const excludeUrls = storage.excludeUrls || [];
   const isEnabled = storage.isEnabled !== false; // Default to true
+  const fontSizeScale = storage.fontSizeScale || 1.0;
+  const fontWeight = storage.fontWeight || 'normal';
+  const lineHeight = storage.lineHeight || 1.5;
 
   // フォントが無効化されている場合は何もしない
   if (!isEnabled) return;
@@ -73,7 +78,12 @@ if (typeof browser === 'undefined') {
             font-display: swap;
           }
           * { 
-            font-family: 'FontifyCustomFont', sans-serif !important; 
+            font-family: 'FontifyCustomFont', sans-serif !important;
+            font-weight: ${fontWeight} !important;
+            line-height: ${lineHeight} !important;
+          }
+          html {
+            font-size: ${fontSizeScale * 100}% !important;
           }
         `;
       } else {
@@ -86,7 +96,12 @@ if (typeof browser === 'undefined') {
         
         style.textContent = `
           * { 
-            font-family: 'FontifyCustomFont', sans-serif !important; 
+            font-family: 'FontifyCustomFont', sans-serif !important;
+            font-weight: ${fontWeight} !important;
+            line-height: ${lineHeight} !important;
+          }
+          html {
+            font-size: ${fontSizeScale * 100}% !important;
           }
         `;
       }
