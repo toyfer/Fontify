@@ -19,5 +19,9 @@ Fontify is a Chrome/Firefox extension that allows you to replace the fonts of an
 - Google Chrome (Manifest V3 compatible)
 - Mozilla Firefox (Manifest V3 compatible)
 
+## Future Development Plans
+- [Feature Roadmap](FEATURE_ROADMAP.en.md) - Detailed feature planning
+- [Development Plan](DEVELOPMENT_PLAN.md) - Specific implementation schedule
+
 ## License
 MIT License (see LICENSE file)
