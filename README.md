@@ -19,11 +19,15 @@ Fontifyは、現在開いているWebサイトのフォントを指定したWeb�
 - Google Chrome（Manifest V3対応）
 - Mozilla Firefox（Manifest V3対応）
 
-## ライセンス
-MIT License（LICENSEファイル参照）
+## 今後の開発計画
+- [機能追加ロードマップ](FEATURE_ROADMAP.md) - 詳細な機能計画
+- [開発計画書](DEVELOPMENT_PLAN.md) - 具体的な実装スケジュール
 
 ## 開発ドキュメント
 - [UI/UX改善計画](UI_UX_IMPROVEMENT_PLAN.md) - 包括的な改善計画とロードマップ
 - [UI/UX Improvement Plan (English)](UI_UX_IMPROVEMENT_PLAN.en.md) - English version of the improvement plan
 - [実装チェックリスト](IMPLEMENTATION_CHECKLIST.md) - 進捗管理用のタスクリスト
 - [UIモックアップ](UI_MOCKUPS.md) - 改善後のUI設計案と仕様
+
+## ライセンス
+MIT License（LICENSEファイル参照）
