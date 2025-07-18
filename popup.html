@@ -2,19 +2,293 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Font Replacer</title>
+  <title>Fontify</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-css-reset/dist/reset.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
   <style>
-    body { background: #f5f6fa; min-width: 220px; }
-    .container { padding: 1.2rem; }
+    :root {
+      --primary-color: #3b82f6;
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --error-color: #ef4444;
+      --background-color: #f8fafc;
+      --surface-color: #ffffff;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+    }
+
+    body { 
+      background: var(--background-color); 
+      min-width: 320px; 
+      min-height: 400px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .container { 
+      padding: 1rem; 
+      background: var(--surface-color);
+      border-radius: 12px;
+      margin: 0.5rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo-icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    .status-section {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .status-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .status-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: 0.5rem;
+    }
+
+    .status-active { background-color: var(--success-color); }
+    .status-inactive { background-color: var(--text-secondary); }
+    .status-excluded { background-color: var(--warning-color); }
+
+    .quick-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .control-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .control-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .control-button:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--surface-color);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-warning {
+      background: var(--warning-color);
+      color: white;
+    }
+
+    .btn-success {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .loading::after {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 0.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      max-width: 300px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      border-left: 4px solid var(--success-color);
+    }
+
+    .toast.warning {
+      border-left: 4px solid var(--warning-color);
+    }
+
+    .toast.error {
+      border-left: 4px solid var(--error-color);
+    }
+
+    .toast-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .toast.success .toast-icon { background: var(--success-color); }
+    .toast.warning .toast-icon { background: var(--warning-color); }
+    .toast.error .toast-icon { background: var(--error-color); }
+
+    .toast-message {
+      flex: 1;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
   </style>
   <script src="popup.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1 class="title is-5 has-text-info">Font Replacer</h1>
-    <button class="button is-warning is-fullwidth" id="addCurrentToExclude">このページを除外リストに追加</button>
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">F</div>
+        <h1 class="title is-6 has-text-weight-semibold" style="margin: 0;">Fontify</h1>
+      </div>
+    </div>
+
+    <!-- Status Section -->
+    <div class="status-section">
+      <div class="status-row">
+        <span class="status-label">フォント置換</span>
+        <div style="display: flex; align-items: center;">
+          <span class="status-value" id="fontStatus">読み込み中...</span>
+          <span class="status-indicator" id="statusIndicator"></span>
+        </div>
+      </div>
+      <div class="status-row">
+        <span class="status-label">現在のフォント</span>
+        <span class="status-value" id="currentFont">未設定</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">このページの状態</span>
+        <span class="status-value" id="pageStatus">確認中...</span>
+      </div>
+    </div>
+
+    <!-- Quick Controls -->
+    <div class="quick-controls">
+      <button class="control-button btn-primary" id="toggleFont" disabled>
+        <span id="toggleText">一時無効化</span>
+      </button>
+      
+      <button class="control-button btn-secondary" id="previewFont">
+        <span>フォントプレビュー</span>
+      </button>
+      
+      <button class="control-button btn-warning" id="addCurrentToExclude">
+        <span>このページを除外</span>
+      </button>
+      
+      <button class="control-button btn-secondary" id="openOptions">
+        <span>詳細設定を開く</span>
+      </button>
+    </div>
   </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
 </body>
 </html>
