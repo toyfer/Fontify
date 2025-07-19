@@ -76,25 +76,66 @@ class ValidationUtils {
     }
   }
 
-  static isValidFontUrl(url) {
-    if (!this.isValidUrl(url)) return false;
+  static async isValidFontUrl(url) {
+    if (!this.isValidUrl(url)) return { valid: false, error: 'URLの形式が正しくありません' };
     
     // Google Fonts check
     if (url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) {
-      return true;
+      return await this.testGoogleFontsUrl(url);
     }
     
     // Font file check
     if (url.match(/\.(woff2?|ttf|otf|eot)(\?.*)?$/i)) {
-      return true;
+      return await this.testFontFileUrl(url);
     }
     
     // CSS file check
     if (url.match(/\.css(\?.*)?$/i)) {
-      return true;
+      return await this.testCssUrl(url);
     }
     
-    return false;
+    return { valid: false, error: 'サポートされていないファイル形式です。.woff, .woff2, .ttf, .otf, .css またはGoogle FontsのURLを使用してください。' };
+  }
+
+  static async testGoogleFontsUrl(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+      return { valid: true };
+    } catch (error) {
+      return { valid: false, error: 'Google Fontsへの接続に失敗しました。URLを確認してください。' };
+    }
+  }
+
+  static async testFontFileUrl(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && (contentType.includes('font') || contentType.includes('application/octet-stream'))) {
+          return { valid: true };
+        }
+        return { valid: false, error: 'ファイルがフォント形式ではないようです。' };
+      }
+      return { valid: false, error: `フォントファイルの読み込みに失敗しました (${response.status})` };
+    } catch (error) {
+      return { valid: false, error: 'フォントファイルにアクセスできません。URLを確認してください。' };
+    }
+  }
+
+  static async testCssUrl(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/css')) {
+          return { valid: true };
+        }
+        return { valid: false, error: 'ファイルがCSS形式ではないようです。' };
+      }
+      return { valid: false, error: `CSSファイルの読み込みに失敗しました (${response.status})` };
+    } catch (error) {
+      return { valid: false, error: 'CSSファイルにアクセスできません。URLを確認してください。' };
+    }
   }
 
   static showValidation(elementId, message, type) {
@@ -139,11 +180,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   const excludeList = document.getElementById('excludeList');
   const emptyState = document.getElementById('emptyState');
   const previewSection = document.getElementById('previewSection');
-  const previewText = document.getElementById('previewText');
+  const previewLarge = document.getElementById('previewLarge');
+  const previewMedium = document.getElementById('previewMedium');
+  const previewNormal = document.getElementById('previewNormal');
+  const previewSmall = document.getElementById('previewSmall');
+  const previewCustom = document.getElementById('previewCustom');
+  const customPreviewText = document.getElementById('customPreviewText');
   const clearCacheBtn = document.getElementById('clearCache');
   const exportSettingsBtn = document.getElementById('exportSettings');
   const importSettingsBtn = document.getElementById('importSettings');
   const importFile = document.getElementById('importFile');
+  
+  // Preset management elements
+  const presetList = document.getElementById('presetList');
+  const presetEmptyState = document.getElementById('presetEmptyState');
+  const presetNameInput = document.getElementById('presetName');
+  const savePresetBtn = document.getElementById('savePreset');
+  
+  // Font adjustment elements
+  const fontSizeScale = document.getElementById('fontSizeScale');
+  const fontSizeValue = document.getElementById('fontSizeValue');
+  const fontWeight = document.getElementById('fontWeight');
+  const lineHeight = document.getElementById('lineHeight');
+  const lineHeightValue = document.getElementById('lineHeightValue');
+  const resetAdjustmentsBtn = document.getElementById('resetAdjustments');
 
   // Load initial data
   await loadSettings();
@@ -158,6 +218,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   exportSettingsBtn.addEventListener('click', handleExportSettings);
   importSettingsBtn.addEventListener('click', () => importFile.click());
   importFile.addEventListener('change', handleImportSettings);
+  
+  // Preset management event handlers
+  savePresetBtn.addEventListener('click', handleSavePreset);
+  presetNameInput.addEventListener('input', validatePresetName);
+  
+  // Preview text change handler
+  customPreviewText.addEventListener('input', updateCustomPreviewText);
+  
+  // Font adjustment event handlers
+  fontSizeScale.addEventListener('input', updateFontSizeValue);
+  lineHeight.addEventListener('input', updateLineHeightValue);
+  fontWeight.addEventListener('change', updatePreviewAdjustments);
+  fontSizeScale.addEventListener('change', updatePreviewAdjustments);
+  lineHeight.addEventListener('change', updatePreviewAdjustments);
+  resetAdjustmentsBtn.addEventListener('click', handleResetAdjustments);
 
   // Enter key handlers
   fontUrlInput.addEventListener('keypress', (e) => {
@@ -166,11 +241,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   excludeUrlInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleAddExcludeUrl();
   });
+  presetNameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleSavePreset();
+  });
 
   // Load settings from storage
   async function loadSettings() {
     try {
-      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls']);
+      const storage = await browser.storage.local.get([
+        'fontUrl', 'excludeUrls', 'fontPresets', 'activePreset', 
+        'fontSizeScale', 'fontWeight', 'lineHeight'
+      ]);
       
       fontUrlInput.value = storage.fontUrl || '';
       if (storage.fontUrl) {
@@ -181,6 +262,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const excludeUrls = storage.excludeUrls || [];
       renderExcludeList(excludeUrls);
       
+      const fontPresets = storage.fontPresets || [];
+      renderPresetList(fontPresets, storage.activePreset);
+      
+      // Load font adjustments
+      fontSizeScale.value = storage.fontSizeScale || 1.0;
+      fontWeight.value = storage.fontWeight || 'normal';
+      lineHeight.value = storage.lineHeight || 1.5;
+      updateFontSizeValue();
+      updateLineHeightValue();
+      updatePreviewAdjustments();
+      
     } catch (error) {
       console.error('Error loading settings:', error);
       toast.error('設定の読み込みに失敗しました');
@@ -188,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Validate font URL
-  function validateFontUrl() {
+  async function validateFontUrl() {
     const url = fontUrlInput.value.trim();
     
     if (!url) {
@@ -196,21 +288,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       return false;
     }
     
-    if (!ValidationUtils.isValidFontUrl(url)) {
+    // Show loading state
+    ValidationUtils.showValidation(
+      'fontUrlValidation',
+      '検証中...',
+      'info'
+    );
+    
+    try {
+      const result = await ValidationUtils.isValidFontUrl(url);
+      
+      if (!result.valid) {
+        ValidationUtils.showValidation(
+          'fontUrlValidation',
+          result.error,
+          'error'
+        );
+        return false;
+      }
+      
       ValidationUtils.showValidation(
         'fontUrlValidation',
-        '有効なフォントURLまたはGoogle FontsのURLを入力してください',
+        '有効なフォントURLです',
+        'success'
+      );
+      return true;
+    } catch (error) {
+      ValidationUtils.showValidation(
+        'fontUrlValidation',
+        'URL検証中にエラーが発生しました',
         'error'
       );
       return false;
     }
-    
-    ValidationUtils.showValidation(
-      'fontUrlValidation',
-      '有効なフォントURLです',
-      'success'
-    );
-    return true;
   }
 
   // Validate exclude URL
@@ -251,19 +361,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      if (!validateFontUrl()) {
+      const isValid = await validateFontUrl();
+      if (!isValid) {
         toast.error('有効なフォントURLを入力してください');
         return;
       }
       
-      await browser.storage.local.set({ fontUrl: url });
+      // Save font URL and adjustments
+      const adjustments = {
+        fontUrl: url,
+        fontSizeScale: parseFloat(fontSizeScale.value),
+        fontWeight: fontWeight.value,
+        lineHeight: parseFloat(lineHeight.value)
+      };
+      
+      await browser.storage.local.set(adjustments);
       updatePreview(url);
       
       toast.success('フォント設定を保存しました');
       
     } catch (error) {
       console.error('Error saving font URL:', error);
-      toast.error('フォント設定の保存に失敗しました');
+      toast.error('フォント設定の保存に失敗しました: ' + error.message);
     } finally {
       LoadingManager.setLoading(saveFontUrlBtn, false);
     }
@@ -278,22 +397,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    if (!validateFontUrl()) {
+    const isValid = await validateFontUrl();
+    if (!isValid) {
       toast.error('有効なフォントURLを入力してください');
       return;
     }
     
-    updatePreview(url);
-    toast.success('プレビューを更新しました');
+    try {
+      updatePreview(url);
+      toast.success('プレビューを更新しました');
+    } catch (error) {
+      console.error('Error updating preview:', error);
+      toast.error('プレビューの更新に失敗しました');
+    }
   }
 
   // Update font preview
   function updatePreview(fontUrl) {
     // Remove existing font styles
     const existingStyle = document.getElementById('preview-font-style');
-    if (existingStyle) {
-      existingStyle.remove();
-    }
+    const existingLink = document.getElementById('preview-font-link');
+    if (existingStyle) existingStyle.remove();
+    if (existingLink) existingLink.remove();
 
     // Add new font style
     const style = document.createElement('style');
@@ -307,9 +432,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           src: url('${fontUrl}');
           font-display: swap;
         }
-        #previewText {
-          font-family: 'PreviewFont', sans-serif !important;
-        }
       `;
     } else {
       // CSS/Google Fonts
@@ -318,16 +440,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       link.href = fontUrl;
       link.id = 'preview-font-link';
       document.head.appendChild(link);
-      
-      style.textContent = `
-        #previewText {
-          font-family: 'PreviewFont', sans-serif !important;
-        }
-      `;
     }
     
     document.head.appendChild(style);
+    
+    // Apply font to all preview elements after a short delay to allow font loading
+    setTimeout(() => {
+      const previewElements = [previewLarge, previewMedium, previewNormal, previewSmall, previewCustom];
+      previewElements.forEach(element => {
+        if (element) {
+          element.classList.add('font-loaded');
+        }
+      });
+    }, 500);
+    
     previewSection.style.display = 'block';
+  }
+
+  // Update custom preview text
+  function updateCustomPreviewText() {
+    const customText = customPreviewText.value || 'これはフォントプリビューです。This is a font preview sample. あいうえお ABCDE 12345';
+    if (previewCustom) {
+      previewCustom.textContent = customText;
+    }
   }
 
   // Handle add exclude URL
@@ -451,13 +586,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     LoadingManager.setLoading(exportSettingsBtn, true);
     
     try {
-      const storage = await browser.storage.local.get(['fontUrl', 'excludeUrls', 'isEnabled']);
+      const storage = await browser.storage.local.get([
+        'fontUrl', 'excludeUrls', 'isEnabled', 'fontPresets', 'activePreset',
+        'fontSizeScale', 'fontWeight', 'lineHeight'
+      ]);
       const settings = {
         fontUrl: storage.fontUrl || '',
         excludeUrls: storage.excludeUrls || [],
         isEnabled: storage.isEnabled !== false,
+        fontPresets: storage.fontPresets || [],
+        activePreset: storage.activePreset || null,
+        fontSizeScale: storage.fontSizeScale || 1.0,
+        fontWeight: storage.fontWeight || 'normal',
+        lineHeight: storage.lineHeight || 1.5,
         exportDate: new Date().toISOString(),
-        version: '1.0'
+        version: '1.2'
       };
       
       const blob = new Blob([JSON.stringify(settings, null, 2)], {
@@ -504,6 +647,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (settings.fontUrl) importData.fontUrl = settings.fontUrl;
       if (settings.excludeUrls) importData.excludeUrls = settings.excludeUrls;
       if (typeof settings.isEnabled === 'boolean') importData.isEnabled = settings.isEnabled;
+      if (settings.fontPresets) importData.fontPresets = settings.fontPresets;
+      if (settings.activePreset) importData.activePreset = settings.activePreset;
+      if (settings.fontSizeScale) importData.fontSizeScale = settings.fontSizeScale;
+      if (settings.fontWeight) importData.fontWeight = settings.fontWeight;
+      if (settings.lineHeight) importData.lineHeight = settings.lineHeight;
       
       await browser.storage.local.set(importData);
       await loadSettings();
@@ -517,6 +665,297 @@ document.addEventListener('DOMContentLoaded', async () => {
       LoadingManager.setLoading(importSettingsBtn, false);
       // Reset file input
       event.target.value = '';
+    }
+  }
+
+  // Validate preset name
+  function validatePresetName() {
+    const name = presetNameInput.value.trim();
+    
+    if (!name) {
+      savePresetBtn.disabled = true;
+      return false;
+    }
+    
+    savePresetBtn.disabled = false;
+    return true;
+  }
+
+  // Handle save preset
+  async function handleSavePreset() {
+    LoadingManager.setLoading(savePresetBtn, true);
+    
+    try {
+      const name = presetNameInput.value.trim();
+      const fontUrl = fontUrlInput.value.trim();
+      
+      if (!name) {
+        toast.warning('プリセット名を入力してください');
+        return;
+      }
+      
+      if (!fontUrl) {
+        toast.warning('保存するフォントURLを設定してください');
+        return;
+      }
+      
+      const isValid = await validateFontUrl();
+      if (!isValid) {
+        toast.error('有効なフォントURLを入力してください');
+        return;
+      }
+      
+      const storage = await browser.storage.local.get(['fontPresets', 'excludeUrls']);
+      const presets = storage.fontPresets || [];
+      const excludeUrls = storage.excludeUrls || [];
+      
+      // Check if preset name already exists
+      const existingIndex = presets.findIndex(p => p.name === name);
+      
+      const newPreset = {
+        name: name,
+        fontUrl: fontUrl,
+        excludeUrls: [...excludeUrls], // Copy current exclude URLs
+        fontSizeScale: parseFloat(fontSizeScale.value),
+        fontWeight: fontWeight.value,
+        lineHeight: parseFloat(lineHeight.value),
+        createdAt: new Date().toISOString()
+      };
+      
+      if (existingIndex >= 0) {
+        // Update existing preset
+        presets[existingIndex] = { ...presets[existingIndex], ...newPreset };
+        toast.success(`プリセット "${name}" を更新しました`);
+      } else {
+        // Add new preset
+        presets.push(newPreset);
+        toast.success(`プリセット "${name}" を保存しました`);
+      }
+      
+      await browser.storage.local.set({ fontPresets: presets });
+      
+      // Clear input and reload preset list
+      presetNameInput.value = '';
+      validatePresetName();
+      renderPresetList(presets);
+      
+    } catch (error) {
+      console.error('Error saving preset:', error);
+      toast.error('プリセットの保存に失敗しました: ' + error.message);
+    } finally {
+      LoadingManager.setLoading(savePresetBtn, false);
+    }
+  }
+
+  // Render preset list
+  function renderPresetList(presets, activePreset = null) {
+    presetList.innerHTML = '';
+    
+    if (presets.length === 0) {
+      presetList.appendChild(presetEmptyState);
+      return;
+    }
+    
+    presets.forEach((preset, index) => {
+      const item = document.createElement('div');
+      item.className = `preset-item ${preset.name === activePreset ? 'active' : ''}`;
+      
+      const info = document.createElement('div');
+      info.className = 'preset-info';
+      
+      const name = document.createElement('div');
+      name.className = 'preset-name';
+      name.textContent = preset.name;
+      
+      const url = document.createElement('div');
+      url.className = 'preset-url';
+      url.textContent = preset.fontUrl;
+      
+      info.appendChild(name);
+      info.appendChild(url);
+      
+      const actions = document.createElement('div');
+      actions.className = 'preset-actions';
+      
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'preset-button apply';
+      applyBtn.innerHTML = '<span>✓</span> 適用';
+      applyBtn.onclick = () => handleApplyPreset(preset);
+      
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'preset-button delete';
+      deleteBtn.innerHTML = '<span>🗑️</span> 削除';
+      deleteBtn.onclick = () => handleDeletePreset(index);
+      
+      actions.appendChild(applyBtn);
+      actions.appendChild(deleteBtn);
+      
+      item.appendChild(info);
+      item.appendChild(actions);
+      presetList.appendChild(item);
+    });
+  }
+
+  // Handle apply preset
+  async function handleApplyPreset(preset) {
+    LoadingManager.setLoading(savePresetBtn, true);
+    
+    try {
+      // Update current settings with preset values
+      fontUrlInput.value = preset.fontUrl;
+      validateFontUrl();
+      updatePreview(preset.fontUrl);
+      
+      // Update font adjustments if they exist in preset
+      if (preset.fontSizeScale !== undefined) {
+        fontSizeScale.value = preset.fontSizeScale;
+        updateFontSizeValue();
+      }
+      if (preset.fontWeight !== undefined) {
+        fontWeight.value = preset.fontWeight;
+      }
+      if (preset.lineHeight !== undefined) {
+        lineHeight.value = preset.lineHeight;
+        updateLineHeightValue();
+      }
+      updatePreviewAdjustments();
+      
+      // Save to storage
+      const saveData = {
+        fontUrl: preset.fontUrl,
+        excludeUrls: preset.excludeUrls || [],
+        activePreset: preset.name
+      };
+      
+      // Include font adjustments in save
+      if (preset.fontSizeScale !== undefined) saveData.fontSizeScale = preset.fontSizeScale;
+      if (preset.fontWeight !== undefined) saveData.fontWeight = preset.fontWeight;
+      if (preset.lineHeight !== undefined) saveData.lineHeight = preset.lineHeight;
+      
+      await browser.storage.local.set(saveData);
+      
+      // Reload exclude list
+      renderExcludeList(preset.excludeUrls || []);
+      
+      // Send message to background script to apply preset
+      try {
+        await browser.runtime.sendMessage({
+          type: 'APPLY_FONT_PRESET',
+          preset: preset
+        });
+      } catch (error) {
+        console.error('Error sending message to background:', error);
+      }
+      
+      // Reload preset list to show active state
+      const storage = await browser.storage.local.get('fontPresets');
+      renderPresetList(storage.fontPresets || [], preset.name);
+      
+      toast.success(`プリセット "${preset.name}" を適用しました`);
+      
+    } catch (error) {
+      console.error('Error applying preset:', error);
+      toast.error('プリセットの適用に失敗しました');
+    } finally {
+      LoadingManager.setLoading(savePresetBtn, false);
+    }
+  }
+
+  // Handle delete preset
+  async function handleDeletePreset(index) {
+    try {
+      const storage = await browser.storage.local.get(['fontPresets', 'activePreset']);
+      const presets = storage.fontPresets || [];
+      
+      if (index < 0 || index >= presets.length) return;
+      
+      const deletedPreset = presets[index];
+      const isActive = storage.activePreset === deletedPreset.name;
+      
+      // Remove preset
+      presets.splice(index, 1);
+      
+      const updateData = { fontPresets: presets };
+      
+      // If deleted preset was active, clear active preset
+      if (isActive) {
+        updateData.activePreset = null;
+      }
+      
+      await browser.storage.local.set(updateData);
+      
+      // Re-render list
+      renderPresetList(presets, isActive ? null : storage.activePreset);
+      
+      toast.success(`プリセット "${deletedPreset.name}" を削除しました`);
+      
+    } catch (error) {
+      console.error('Error deleting preset:', error);
+      toast.error('プリセットの削除に失敗しました');
+    }
+  }
+
+  // Update font size value display
+  function updateFontSizeValue() {
+    const value = Math.round(parseFloat(fontSizeScale.value) * 100);
+    fontSizeValue.textContent = `${value}%`;
+  }
+
+  // Update line height value display
+  function updateLineHeightValue() {
+    lineHeightValue.textContent = parseFloat(lineHeight.value).toFixed(1);
+  }
+
+  // Update preview with adjustments
+  function updatePreviewAdjustments() {
+    const sizeScale = parseFloat(fontSizeScale.value);
+    const weight = fontWeight.value;
+    const lineHeightVal = parseFloat(lineHeight.value);
+    
+    // Apply adjustments to all preview elements
+    const previewElements = [previewLarge, previewMedium, previewNormal, previewSmall, previewCustom];
+    previewElements.forEach(element => {
+      if (element) {
+        const baseSize = element.classList.contains('large') ? 24 :
+                        element.classList.contains('medium') ? 18 :
+                        element.classList.contains('small') ? 14 : 16;
+        
+        element.style.fontSize = `${baseSize * sizeScale}px`;
+        element.style.fontWeight = weight;
+        element.style.lineHeight = lineHeightVal;
+      }
+    });
+  }
+
+  // Handle reset adjustments
+  async function handleResetAdjustments() {
+    LoadingManager.setLoading(resetAdjustmentsBtn, true);
+    
+    try {
+      // Reset to default values
+      fontSizeScale.value = 1.0;
+      fontWeight.value = 'normal';
+      lineHeight.value = 1.5;
+      
+      // Update displays
+      updateFontSizeValue();
+      updateLineHeightValue();
+      updatePreviewAdjustments();
+      
+      // Save to storage
+      await browser.storage.local.set({
+        fontSizeScale: 1.0,
+        fontWeight: 'normal',
+        lineHeight: 1.5
+      });
+      
+      toast.success('フォント調整をリセットしました');
+      
+    } catch (error) {
+      console.error('Error resetting adjustments:', error);
+      toast.error('調整のリセットに失敗しました');
+    } finally {
+      LoadingManager.setLoading(resetAdjustmentsBtn, false);
     }
   }
 });
