@@ -3,9 +3,299 @@
 <head>
   <meta charset="UTF-8">
   <title>Fontify オプション</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-css-reset/dist/reset.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+
   <style>
+    /* CSS Reset - Essential parts only */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      line-height: 1.15;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    hr {
+      box-sizing: content-box;
+      height: 0;
+      overflow: visible;
+    }
+
+    pre {
+      font-family: monospace, monospace;
+      font-size: 1em;
+    }
+
+    a {
+      background-color: transparent;
+    }
+
+    abbr[title] {
+      border-bottom: none;
+      text-decoration: underline;
+      text-decoration: underline dotted;
+    }
+
+    b,
+    strong {
+      font-weight: bolder;
+    }
+
+    code,
+    kbd,
+    samp {
+      font-family: monospace, monospace;
+      font-size: 1em;
+    }
+
+    small {
+      font-size: 80%;
+    }
+
+    sub,
+    sup {
+      font-size: 75%;
+      line-height: 0;
+      position: relative;
+      vertical-align: baseline;
+    }
+
+    sub {
+      bottom: -0.25em;
+    }
+
+    sup {
+      top: -0.5em;
+    }
+
+    img {
+      border-style: none;
+    }
+
+    button,
+    input,
+    optgroup,
+    select,
+    textarea {
+      font-family: inherit;
+      font-size: 100%;
+      line-height: 1.15;
+      margin: 0;
+    }
+
+    button,
+    input {
+      overflow: visible;
+    }
+
+    button,
+    select {
+      text-transform: none;
+    }
+
+    button,
+    [type="button"],
+    [type="reset"],
+    [type="submit"] {
+      -webkit-appearance: button;
+    }
+
+    button::-moz-focus-inner,
+    [type="button"]::-moz-focus-inner,
+    [type="reset"]::-moz-focus-inner,
+    [type="submit"]::-moz-focus-inner {
+      border-style: none;
+      padding: 0;
+    }
+
+    button:-moz-focusring,
+    [type="button"]:-moz-focusring,
+    [type="reset"]:-moz-focusring,
+    [type="submit"]:-moz-focusring {
+      outline: 1px dotted ButtonText;
+    }
+
+    fieldset {
+      padding: 0.35em 0.75em 0.625em;
+    }
+
+    legend {
+      box-sizing: border-box;
+      color: inherit;
+      display: table;
+      max-width: 100%;
+      padding: 0;
+      white-space: normal;
+    }
+
+    progress {
+      vertical-align: baseline;
+    }
+
+    textarea {
+      overflow: auto;
+    }
+
+    [type="checkbox"],
+    [type="radio"] {
+      box-sizing: border-box;
+      padding: 0;
+    }
+
+    [type="number"]::-webkit-inner-spin-button,
+    [type="number"]::-webkit-outer-spin-button {
+      height: auto;
+    }
+
+    [type="search"] {
+      -webkit-appearance: textfield;
+      outline-offset: -2px;
+    }
+
+    [type="search"]::-webkit-search-decoration {
+      -webkit-appearance: none;
+    }
+
+    ::-webkit-file-upload-button {
+      -webkit-appearance: button;
+      font: inherit;
+    }
+
+    details {
+      display: block;
+    }
+
+    summary {
+      display: list-item;
+    }
+
+    template {
+      display: none;
+    }
+
+    [hidden] {
+      display: none;
+    }
+
+    /* Essential Bulma classes used in the template */
+    .title.is-4 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      line-height: 1.125;
+    }
+
+    .field {
+      display: block;
+    }
+
+    .field:not(:last-child) {
+      margin-bottom: 0.75rem;
+    }
+
+    .field.has-addons {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .field.has-addons .control:not(:last-child) {
+      margin-right: -1px;
+    }
+
+    .field.has-addons .control:not(:first-child):not(:last-child) .button,
+    .field.has-addons .control:not(:first-child):not(:last-child) .input,
+    .field.has-addons .control:not(:first-child):not(:last-child) .select select {
+      border-radius: 0;
+    }
+
+    .field.has-addons .control:first-child:not(:only-child) .button,
+    .field.has-addons .control:first-child:not(:only-child) .input,
+    .field.has-addons .control:first-child:not(:only-child) .select select {
+      border-bottom-right-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    .field.has-addons .control:last-child:not(:only-child) .button,
+    .field.has-addons .control:last-child:not(:only-child) .input,
+    .field.has-addons .control:last-child:not(:only-child) .select select {
+      border-bottom-left-radius: 0;
+      border-top-left-radius: 0;
+    }
+
+    .control {
+      box-sizing: border-box;
+      clear: both;
+      font-size: 1rem;
+      position: relative;
+      text-align: inherit;
+    }
+
+    .control.is-expanded {
+      flex-grow: 1;
+      flex-shrink: 1;
+    }
+
+    .control.has-icons-left .input,
+    .control.has-icons-left .select select {
+      padding-left: 2.5em;
+    }
+
+    .control.has-icons-left .icon.is-left {
+      left: 0;
+    }
+
+    .icon {
+      align-items: center;
+      display: inline-flex;
+      height: 1.5rem;
+      justify-content: center;
+      width: 1.5rem;
+    }
+
+    .icon.is-small {
+      height: 1rem;
+      width: 1rem;
+    }
+
+    .icon.is-left {
+      color: #dbdbdb;
+      pointer-events: none;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 4;
+    }
+
+    .select {
+      display: inline-block;
+      max-width: 100%;
+      position: relative;
+      vertical-align: top;
+    }
+
+    .select select {
+      cursor: pointer;
+      display: block;
+      font-size: 1em;
+      max-width: 100%;
+      outline: none;
+    }
+
+    .select.is-fullwidth {
+      width: 100%;
+    }
+
+    .select.is-fullwidth select {
+      width: 100%;
+    }
+
     :root {
       --primary-color: #3b82f6;
       --success-color: #10b981;
