@@ -103,11 +103,10 @@ if (typeof browser === 'undefined') {
           }
           * { 
             font-family: 'FontifyCustomFont', sans-serif !important;
-            font-weight: ${fontWeight} !important;
-            line-height: ${lineHeight} !important;
           }
           html {
             font-size: ${fontSizeScale * 100}% !important;
+            line-height: ${lineHeight} !important;
           }
         `;
       } else {
@@ -121,11 +120,10 @@ if (typeof browser === 'undefined') {
         style.textContent = `
           * { 
             font-family: 'FontifyCustomFont', sans-serif !important;
-            font-weight: ${fontWeight} !important;
-            line-height: ${lineHeight} !important;
           }
           html {
             font-size: ${fontSizeScale * 100}% !important;
+            line-height: ${lineHeight} !important;
           }
         `;
       }
