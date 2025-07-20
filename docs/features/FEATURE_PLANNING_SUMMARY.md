@@ -19,7 +19,7 @@
 - 上記日本語版の英語翻訳
 - 国際的な開発者向けの詳細情報
 
-### 🚀 [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
+### 🚀 [DEVELOPMENT_PLAN.md](../development/DEVELOPMENT_PLAN.md)
 **内容**: 具体的な開発計画書
 - 3フェーズの開発スケジュール
 - 技術仕様とストレージ設計
@@ -28,7 +28,7 @@
 - リリース計画（v1.1.0 - v1.3.0）
 - リスク管理
 
-### 💻 [IMPLEMENTATION_TEMPLATES.md](IMPLEMENTATION_TEMPLATES.md)
+### 💻 [IMPLEMENTATION_TEMPLATES.md](../development/IMPLEMENTATION_TEMPLATES.md)
 **内容**: 実装テンプレート集
 - フォントプレビューコンポーネント
 - プリセット管理クラス
@@ -106,12 +106,12 @@
 
 ## 関連ドキュメント
 
-- [README.md](README.md) - プロジェクト概要（日本語）
-- [README.en.md](README.en.md) - プロジェクト概要（英語）
-- [manifest.json](manifest.json) - 拡張機能設定
-- [content.js](content.js) - コンテンツスクリプト
-- [options.js](options.js) - オプションページ
-- [popup.js](popup.js) - ポップアップ機能
+- [README.md](../../README.md) - プロジェクト概要（日本語）
+- [README.en.md](../../README.en.md) - プロジェクト概要（英語）
+- [manifest.json](../../src/manifest.json) - 拡張機能設定
+- [content.js](../../src/js/content.js) - コンテンツスクリプト
+- [options.js](../../src/js/options.js) - オプションページ
+- [popup.js](../../src/js/popup.js) - ポップアップ機能
 
 ---
 
