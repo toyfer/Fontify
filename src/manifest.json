@@ -12,20 +12,20 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "js/background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["js/content.js"],
       "run_at": "document_idle"
     }
   ],
   "options_ui": {
-    "page": "options.html",
+    "page": "html/options.html",
     "open_in_tab": true
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "html/popup.html"
   }
 }
