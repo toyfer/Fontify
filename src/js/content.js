@@ -156,6 +156,8 @@ if (typeof browser === 'undefined') {
 
     // 新しいスタイルシートの監視とフォント再適用
     function setupStylesheetMonitoring() {
+      let stylesheetTimeout;
+      
       // MutationObserverでスタイルシートの追加を監視
       const stylesheetObserver = new MutationObserver((mutations) => {
         let newStylesheetAdded = false;
@@ -185,23 +187,16 @@ if (typeof browser === 'undefined') {
         if (newStylesheetAdded) {
           console.log('Fontify: New stylesheet detected, reapplying font');
           // 少し遅延してから再適用（新しいスタイルシートが完全に適用されるのを待つ）
-          clearTimeout(window.fontifyStylesheetTimeout);
-          window.fontifyStylesheetTimeout = setTimeout(() => {
+          clearTimeout(stylesheetTimeout);
+          stylesheetTimeout = setTimeout(() => {
             applyFont();
           }, 100);
         }
       });
       
-      // headとbody両方を監視（スタイルシートはheadに追加されることが多いが、bodyに追加される場合もある）
+      // headを監視（スタイルシートは通常headに追加される）
       if (document.head) {
         stylesheetObserver.observe(document.head, {
-          childList: true,
-          subtree: true
-        });
-      }
-      
-      if (document.body) {
-        stylesheetObserver.observe(document.body, {
           childList: true,
           subtree: true
         });
@@ -228,16 +223,11 @@ if (typeof browser === 'undefined') {
         console.log('Fontify: Style missing, reapplying font');
         applyFont();
       } else {
-        // スタイルが最後の子要素でない場合、再適用して優先度を確保
+        // スタイルがheadの最後にない場合、再配置して優先度を確保
         const headChildren = Array.from(document.head.children);
-        const styleIndex = headChildren.indexOf(currentStyle);
-        const lastStylesheetIndex = headChildren.reverse().findIndex(child => 
-          (child.tagName === 'STYLE' || (child.tagName === 'LINK' && child.rel === 'stylesheet')) 
-          && child.id !== 'fontify-custom-font' && child.id !== 'fontify-custom-link'
-        );
-        
-        if (lastStylesheetIndex >= 0 && styleIndex < headChildren.length - 1 - lastStylesheetIndex) {
-          console.log('Fontify: Reordering styles for higher priority');
+        const isLastElement = headChildren[headChildren.length - 1] === currentStyle;
+        if (!isLastElement) {
+          console.log('Fontify: Repositioning style for higher priority');
           applyFont();
         }
       }
@@ -248,46 +238,5 @@ if (typeof browser === 'undefined') {
       }
     }, 5000); // 5秒ごと
 
-    // 動的に追加される要素にも対応（DOM要素の追加のみを監視）
-    const elementObserver = new MutationObserver((mutations) => {
-      let newElementsAdded = false;
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          // 新しいDOM要素が追加された場合のみ反応
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE && 
-                node.tagName !== 'STYLE' && 
-                node.tagName !== 'LINK') {
-              newElementsAdded = true;
-            }
-          });
-        }
-      });
-      
-      if (newElementsAdded) {
-        // デバウンス処理で頻繁な再適用を防ぐ
-        clearTimeout(window.fontifyElementTimeout);
-        window.fontifyElementTimeout = setTimeout(() => {
-          // 新しく追加された要素に対してフォントを再適用
-          // ただし、スタイルシート自体は変更しない
-          const existingStyle = document.getElementById('fontify-custom-font');
-          if (existingStyle && document.head.contains(existingStyle)) {
-            // スタイルが存在する場合は、新しい要素に自動的に適用されるはず
-            // 念のため、スタイル要素の位置を確認して必要なら再配置
-            document.head.appendChild(existingStyle);
-          } else {
-            // スタイルが失われている場合は再適用
-            applyFont();
-          }
-        }, 300);
-      }
-    });
-
-    if (document.body) {
-      elementObserver.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
-    }
   }
 })();
