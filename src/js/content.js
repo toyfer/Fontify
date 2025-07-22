@@ -93,6 +93,14 @@ if (typeof browser === 'undefined') {
       const style = document.createElement("style");
       style.id = 'fontify-custom-font';
       
+      // より高い優先度を確保するため、styleをheadの最後に挿入し、より具体的なセレクターを使用
+      const specificSelectors = [
+        'html *',
+        'body *', 
+        'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'a', 'ul', 'li', 'table', 'td', 'th', 'form', 'input', 'button'
+      ].join(', ');
+      
       if (fontDataUrl) {
         // @font-faceでDataURLを使う
         style.textContent = `
@@ -101,7 +109,7 @@ if (typeof browser === 'undefined') {
             src: url('${fontDataUrl}'); 
             font-display: swap;
           }
-          * { 
+          ${specificSelectors} { 
             font-family: 'FontifyCustomFont', sans-serif !important;
             font-weight: ${fontWeight} !important;
             line-height: ${lineHeight} !important;
@@ -112,6 +120,11 @@ if (typeof browser === 'undefined') {
         `;
       } else {
         // 通常のlink参照
+        const existingLink = document.getElementById('fontify-custom-link');
+        if (existingLink) {
+          existingLink.remove();
+        }
+        
         const link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = fontUrl;
@@ -119,7 +132,7 @@ if (typeof browser === 'undefined') {
         document.head.appendChild(link);
         
         style.textContent = `
-          * { 
+          ${specificSelectors} { 
             font-family: 'FontifyCustomFont', sans-serif !important;
             font-weight: ${fontWeight} !important;
             line-height: ${lineHeight} !important;
@@ -130,6 +143,7 @@ if (typeof browser === 'undefined') {
         `;
       }
       
+      // スタイルをheadの最後に挿入して、他のスタイルシートより後に読み込まれるようにする
       document.head.appendChild(style);
     }
 
@@ -140,32 +154,89 @@ if (typeof browser === 'undefined') {
       applyFont();
     }
 
-    // 動的に追加される要素にも対応
-    const observer = new MutationObserver((mutations) => {
-      let shouldReapply = false;
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          shouldReapply = true;
+    // 新しいスタイルシートの監視とフォント再適用
+    function setupStylesheetMonitoring() {
+      let stylesheetTimeout;
+      
+      // MutationObserverでスタイルシートの追加を監視
+      const stylesheetObserver = new MutationObserver((mutations) => {
+        let newStylesheetAdded = false;
+        
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                // link[rel="stylesheet"]またはstyle要素の追加を検出
+                if ((node.tagName === 'LINK' && node.rel === 'stylesheet') || 
+                    node.tagName === 'STYLE') {
+                  // 自分自身のスタイルは除外
+                  if (node.id !== 'fontify-custom-font' && node.id !== 'fontify-custom-link') {
+                    newStylesheetAdded = true;
+                  }
+                }
+                // 子要素にスタイルシートが含まれている可能性もチェック
+                const childLinks = node.querySelectorAll && node.querySelectorAll('link[rel="stylesheet"], style');
+                if (childLinks && childLinks.length > 0) {
+                  newStylesheetAdded = true;
+                }
+              }
+            });
+          }
+        });
+        
+        if (newStylesheetAdded) {
+          console.log('Fontify: New stylesheet detected, reapplying font');
+          // 少し遅延してから再適用（新しいスタイルシートが完全に適用されるのを待つ）
+          clearTimeout(stylesheetTimeout);
+          stylesheetTimeout = setTimeout(() => {
+            applyFont();
+          }, 100);
         }
       });
       
-      if (shouldReapply) {
-        // デバウンス処理で頻繁な再適用を防ぐ
-        clearTimeout(window.fontifyReapplyTimeout);
-        window.fontifyReapplyTimeout = setTimeout(() => {
-          // 新しく追加された要素に対してフォントを再適用
-          const existingStyle = document.getElementById('fontify-custom-font');
-          if (existingStyle) {
-            existingStyle.remove();
-            applyFont();
-          }
-        }, 100);
+      // headを監視（スタイルシートは通常headに追加される）
+      if (document.head) {
+        stylesheetObserver.observe(document.head, {
+          childList: true,
+          subtree: true
+        });
       }
-    });
+    }
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+    // スタイルシート監視を開始
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupStylesheetMonitoring);
+    } else {
+      setupStylesheetMonitoring();
+    }
+
+    // 定期的なフォント再適用（フォールバック機能）
+    // 一部のWebサイトでは動的にCSSが変更される場合があるため
+    let periodicCheckCount = 0;
+    const maxPeriodicChecks = 10; // 最大10回まで（50秒間）
+    const periodicInterval = setInterval(() => {
+      periodicCheckCount++;
+      
+      // 拡張機能のスタイルが存在するかチェック
+      const currentStyle = document.getElementById('fontify-custom-font');
+      if (!currentStyle || !document.head.contains(currentStyle)) {
+        console.log('Fontify: Style missing, reapplying font');
+        applyFont();
+      } else {
+        // スタイルがheadの最後にない場合、再配置して優先度を確保
+        const headChildren = Array.from(document.head.children);
+        const isLastElement = headChildren[headChildren.length - 1] === currentStyle;
+        if (!isLastElement) {
+          console.log('Fontify: Repositioning style for higher priority');
+          applyFont();
+        }
+      }
+      
+      // 一定回数後は停止（パフォーマンス考慮）
+      if (periodicCheckCount >= maxPeriodicChecks) {
+        clearInterval(periodicInterval);
+      }
+    }, 5000); // 5秒ごと
+
   }
 })();
