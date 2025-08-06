@@ -3,6 +3,81 @@ if (typeof browser === 'undefined') {
   var browser = chrome;
 }
 
+// URL除外判定関数（content.jsと同じ）
+function isUrlExcluded(currentUrl, excludeUrls) {
+  if (!currentUrl || !excludeUrls || excludeUrls.length === 0) {
+    return false;
+  }
+  
+  return excludeUrls.some(excludePattern => {
+    // 後方互換性: 文字列の場合は新しいオブジェクト形式に変換
+    let exclusion;
+    if (typeof excludePattern === 'string') {
+      exclusion = {
+        url: excludePattern,
+        type: inferExclusionType(excludePattern)
+      };
+    } else {
+      exclusion = excludePattern;
+    }
+    
+    return matchesExclusion(currentUrl, exclusion);
+  });
+}
+
+// 除外パターンの種類を推測
+function inferExclusionType(url) {
+  try {
+    const urlObj = new URL(url);
+    // パスが '/' で終わっているか、パスがない場合はドメインレベル
+    if (urlObj.pathname === '/' || urlObj.pathname === '') {
+      return 'domain';
+    }
+    // パスが '/' で終わっている場合はプレフィックス
+    if (urlObj.pathname.endsWith('/')) {
+      return 'prefix';  
+    }
+    // それ以外は完全一致
+    return 'exact';
+  } catch (e) {
+    // URL解析に失敗した場合はプレフィックスマッチにフォールバック
+    return 'prefix';
+  }
+}
+
+// 除外条件とのマッチング
+function matchesExclusion(currentUrl, exclusion) {
+  try {
+    const currentUrlObj = new URL(currentUrl);
+    const excludeUrlObj = new URL(exclusion.url);
+    
+    switch (exclusion.type) {
+      case 'exact':
+        // 完全一致（クエリパラメータとフラグメントは除外）
+        return (currentUrlObj.origin + currentUrlObj.pathname) === 
+               (excludeUrlObj.origin + excludeUrlObj.pathname);
+               
+      case 'domain':
+        // ドメインレベルマッチング（サブドメインも含む）
+        return currentUrlObj.hostname === excludeUrlObj.hostname ||
+               currentUrlObj.hostname.endsWith('.' + excludeUrlObj.hostname);
+               
+      case 'prefix':
+        // プレフィックスマッチング（より厳密に）
+        return currentUrlObj.origin === excludeUrlObj.origin &&
+               currentUrlObj.pathname.startsWith(excludeUrlObj.pathname);
+               
+      default:
+        // フォールバック: 従来のstartsWith動作
+        return currentUrl.startsWith(exclusion.url);
+    }
+  } catch (e) {
+    // URL解析に失敗した場合は従来のstartsWith動作にフォールバック
+    console.warn('Fontify: URL parsing failed, using fallback matching:', e);
+    return currentUrl.startsWith(exclusion.url);
+  }
+}
+
 // Toast notification system
 class ToastManager {
   constructor() {
@@ -132,9 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Update page status
       if (currentTab?.url) {
-        const isExcluded = excludeUrls.some(excludeUrl => 
-          currentTab.url.startsWith(excludeUrl)
-        );
+        const isExcluded = isUrlExcluded(currentTab.url, excludeUrls);
         
         if (isExcluded) {
           pageStatus.textContent = '除外済み';
@@ -391,16 +464,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const url = currentTab.url;
+      const currentUrl = currentTab.url;
       const storage = await browser.storage.local.get('excludeUrls');
       const urls = storage.excludeUrls || [];
       
-      if (urls.some(excludeUrl => url.startsWith(excludeUrl))) {
+      // 既に除外されているかチェック
+      if (isUrlExcluded(currentUrl, urls)) {
         toast.warning('このページは既に除外リストに含まれています');
         return;
       }
       
-      urls.push(url);
+      // 除外タイプを選択させる
+      const exclusionType = await showExclusionTypeDialog(currentUrl);
+      if (!exclusionType) {
+        return; // キャンセルされた
+      }
+      
+      let exclusionUrl;
+      switch (exclusionType) {
+        case 'exact':
+          // 完全一致: 現在のページのみ
+          exclusionUrl = currentUrl;
+          break;
+        case 'domain':
+          // ドメイン全体
+          const urlObj = new URL(currentUrl);
+          exclusionUrl = urlObj.origin + '/';
+          break;
+        case 'prefix':
+          // 現在のディレクトリ以下
+          const pathUrl = new URL(currentUrl);
+          const pathParts = pathUrl.pathname.split('/');
+          pathParts.pop(); // ファイル名を除去
+          exclusionUrl = pathUrl.origin + pathParts.join('/') + '/';
+          break;
+      }
+      
+      urls.push(exclusionUrl);
       await browser.storage.local.set({ excludeUrls: urls });
       
       // Reload page to apply exclusion
@@ -417,6 +517,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       LoadingManager.setLoading(excludeButton, false);
     }
+  }
+  
+  // 除外タイプ選択ダイアログ
+  function showExclusionTypeDialog(currentUrl) {
+    return new Promise((resolve) => {
+      try {
+        const urlObj = new URL(currentUrl);
+        const domain = urlObj.hostname;
+        const path = urlObj.pathname;
+        const pathParts = path.split('/');
+        const directory = pathParts.slice(0, -1).join('/') + '/';
+        
+        const options = [
+          {
+            type: 'exact',
+            label: 'このページのみ',
+            description: `${urlObj.pathname}`,
+            recommended: path !== '/' && !path.endsWith('/')
+          },
+          {
+            type: 'prefix', 
+            label: 'このディレクトリ以下',
+            description: directory,
+            recommended: directory !== '/' && pathParts.length > 2
+          },
+          {
+            type: 'domain',
+            label: 'このサイト全体',
+            description: domain,
+            recommended: false
+          }
+        ];
+        
+        // 最も適切なオプションを推奨として選択
+        const recommended = options.find(opt => opt.recommended) || options[0];
+        
+        // シンプルな確認: 最も適切なオプションを提案
+        const message = `除外範囲を選択してください:\n\n` +
+                       `推奨: ${recommended.label} (${recommended.description})\n\n` +
+                       `OK = 推奨設定\nキャンセル = 中止`;
+        
+        if (confirm(message)) {
+          resolve(recommended.type);
+        } else {
+          resolve(null);
+        }
+      } catch (error) {
+        console.error('Error in exclusion type dialog:', error);
+        // エラー時はページ単位除外にフォールバック
+        resolve('exact');
+      }
+    });
   }
 
   // Handle open options
