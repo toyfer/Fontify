@@ -3,6 +3,92 @@ if (typeof browser === 'undefined') {
   var browser = chrome;
 }
 
+// URL除外判定関数（content.js、popup.jsと同じ）
+function isUrlExcluded(currentUrl, excludeUrls) {
+  if (!currentUrl || !excludeUrls || excludeUrls.length === 0) {
+    return false;
+  }
+  
+  return excludeUrls.some(excludePattern => {
+    // 後方互換性: 文字列の場合は新しいオブジェクト形式に変換
+    let exclusion;
+    if (typeof excludePattern === 'string') {
+      exclusion = {
+        url: excludePattern,
+        type: inferExclusionType(excludePattern)
+      };
+    } else {
+      exclusion = excludePattern;
+    }
+    
+    return matchesExclusion(currentUrl, exclusion);
+  });
+}
+
+// 除外パターンの種類を推測
+function inferExclusionType(url) {
+  try {
+    const urlObj = new URL(url);
+    // パスが '/' で終わっているか、パスがない場合はドメインレベル
+    if (urlObj.pathname === '/' || urlObj.pathname === '') {
+      return 'domain';
+    }
+    // パスが '/' で終わっている場合はプレフィックス
+    if (urlObj.pathname.endsWith('/')) {
+      return 'prefix';  
+    }
+    // それ以外は完全一致
+    return 'exact';
+  } catch (e) {
+    // URL解析に失敗した場合はプレフィックスマッチにフォールバック
+    return 'prefix';
+  }
+}
+
+// 除外条件とのマッチング
+function matchesExclusion(currentUrl, exclusion) {
+  try {
+    const currentUrlObj = new URL(currentUrl);
+    const excludeUrlObj = new URL(exclusion.url);
+    
+    switch (exclusion.type) {
+      case 'exact':
+        // 完全一致（クエリパラメータとフラグメントは除外）
+        return (currentUrlObj.origin + currentUrlObj.pathname) === 
+               (excludeUrlObj.origin + excludeUrlObj.pathname);
+               
+      case 'domain':
+        // ドメインレベルマッチング（サブドメインも含む）
+        return currentUrlObj.hostname === excludeUrlObj.hostname ||
+               currentUrlObj.hostname.endsWith('.' + excludeUrlObj.hostname);
+               
+      case 'prefix':
+        // プレフィックスマッチング（より厳密に）
+        return currentUrlObj.origin === excludeUrlObj.origin &&
+               currentUrlObj.pathname.startsWith(excludeUrlObj.pathname);
+               
+      default:
+        // フォールバック: 従来のstartsWith動作
+        return currentUrl.startsWith(exclusion.url);
+    }
+  } catch (e) {
+    // URL解析に失敗した場合は従来のstartsWith動作にフォールバック
+    console.warn('Fontify: URL parsing failed, using fallback matching:', e);
+    return currentUrl.startsWith(exclusion.url);
+  }
+}
+
+// 除外タイプの表示用ラベル取得
+function getExclusionTypeLabel(url) {
+  const type = inferExclusionType(url);
+  switch (type) {
+    case 'exact': return 'ページ';
+    case 'domain': return 'サイト';
+    case 'prefix': return 'セクション';
+    default: return 'パターン';
+  }
+}
+
 // Toast notification system (same as popup.js)
 class ToastManager {
   constructor() {
@@ -520,16 +606,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       const item = document.createElement('div');
       item.className = 'exclude-item';
       
-      const urlSpan = document.createElement('span');
+      const urlInfo = document.createElement('div');
+      urlInfo.className = 'exclude-info';
+      
+      const urlSpan = document.createElement('div');
       urlSpan.className = 'exclude-url';
       urlSpan.textContent = url;
+      
+      const typeLabel = document.createElement('div');
+      typeLabel.className = 'exclude-type';
+      typeLabel.textContent = `[${getExclusionTypeLabel(url)}]`;
+      typeLabel.style.fontSize = '0.75rem';
+      typeLabel.style.color = 'var(--text-secondary)';
+      typeLabel.style.marginTop = '0.25rem';
+      
+      urlInfo.appendChild(urlSpan);
+      urlInfo.appendChild(typeLabel);
       
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'button is-danger';
       deleteBtn.innerHTML = '<span>🗑️</span> 削除';
       deleteBtn.onclick = () => handleDeleteExcludeUrl(index);
       
-      item.appendChild(urlSpan);
+      item.appendChild(urlInfo);
       item.appendChild(deleteBtn);
       excludeList.appendChild(item);
     });

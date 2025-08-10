@@ -6,6 +6,81 @@ if (typeof browser === 'undefined') {
 // Service Worker for Fontify extension
 // Handles installation, updates, and message passing
 
+// URL除外判定関数（他のスクリプトと同じ）
+function isUrlExcluded(currentUrl, excludeUrls) {
+  if (!currentUrl || !excludeUrls || excludeUrls.length === 0) {
+    return false;
+  }
+  
+  return excludeUrls.some(excludePattern => {
+    // 後方互換性: 文字列の場合は新しいオブジェクト形式に変換
+    let exclusion;
+    if (typeof excludePattern === 'string') {
+      exclusion = {
+        url: excludePattern,
+        type: inferExclusionType(excludePattern)
+      };
+    } else {
+      exclusion = excludePattern;
+    }
+    
+    return matchesExclusion(currentUrl, exclusion);
+  });
+}
+
+// 除外パターンの種類を推測
+function inferExclusionType(url) {
+  try {
+    const urlObj = new URL(url);
+    // パスが '/' で終わっているか、パスがない場合はドメインレベル
+    if (urlObj.pathname === '/' || urlObj.pathname === '') {
+      return 'domain';
+    }
+    // パスが '/' で終わっている場合はプレフィックス
+    if (urlObj.pathname.endsWith('/')) {
+      return 'prefix';  
+    }
+    // それ以外は完全一致
+    return 'exact';
+  } catch (e) {
+    // URL解析に失敗した場合はプレフィックスマッチにフォールバック
+    return 'prefix';
+  }
+}
+
+// 除外条件とのマッチング
+function matchesExclusion(currentUrl, exclusion) {
+  try {
+    const currentUrlObj = new URL(currentUrl);
+    const excludeUrlObj = new URL(exclusion.url);
+    
+    switch (exclusion.type) {
+      case 'exact':
+        // 完全一致（クエリパラメータとフラグメントは除外）
+        return (currentUrlObj.origin + currentUrlObj.pathname) === 
+               (excludeUrlObj.origin + excludeUrlObj.pathname);
+               
+      case 'domain':
+        // ドメインレベルマッチング（サブドメインも含む）
+        return currentUrlObj.hostname === excludeUrlObj.hostname ||
+               currentUrlObj.hostname.endsWith('.' + excludeUrlObj.hostname);
+               
+      case 'prefix':
+        // プレフィックスマッチング（より厳密に）
+        return currentUrlObj.origin === excludeUrlObj.origin &&
+               currentUrlObj.pathname.startsWith(excludeUrlObj.pathname);
+               
+      default:
+        // フォールバック: 従来のstartsWith動作
+        return currentUrl.startsWith(exclusion.url);
+    }
+  } catch (e) {
+    // URL解析に失敗した場合は従来のstartsWith動作にフォールバック
+    console.warn('Fontify: URL parsing failed, using fallback matching:', e);
+    return currentUrl.startsWith(exclusion.url);
+  }
+}
+
 // Extension installation and update handling
 browser.runtime.onInstalled.addListener((details) => {
   console.log('Fontify extension installed/updated:', details.reason);
@@ -137,7 +212,7 @@ async function handleApplyFontPreset(preset, sendResponse) {
     const excludeUrls = preset.excludeUrls || [];
     
     for (const tab of tabs) {
-      if (tab.url && !excludeUrls.some(url => tab.url.startsWith(url))) {
+      if (tab.url && !isUrlExcluded(tab.url, excludeUrls)) {
         try {
           await browser.tabs.reload(tab.id);
         } catch (error) {

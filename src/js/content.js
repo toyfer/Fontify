@@ -5,6 +5,81 @@ if (typeof browser === 'undefined') {
 
 // ページ内のフォントを置換するスクリプト
 
+// URL除外判定関数
+function isUrlExcluded(currentUrl, excludeUrls) {
+  if (!currentUrl || !excludeUrls || excludeUrls.length === 0) {
+    return false;
+  }
+  
+  return excludeUrls.some(excludePattern => {
+    // 後方互換性: 文字列の場合は新しいオブジェクト形式に変換
+    let exclusion;
+    if (typeof excludePattern === 'string') {
+      exclusion = {
+        url: excludePattern,
+        type: inferExclusionType(excludePattern)
+      };
+    } else {
+      exclusion = excludePattern;
+    }
+    
+    return matchesExclusion(currentUrl, exclusion);
+  });
+}
+
+// 除外パターンの種類を推測
+function inferExclusionType(url) {
+  try {
+    const urlObj = new URL(url);
+    // パスが '/' で終わっているか、パスがない場合はドメインレベル
+    if (urlObj.pathname === '/' || urlObj.pathname === '') {
+      return 'domain';
+    }
+    // パスが '/' で終わっている場合はプレフィックス
+    if (urlObj.pathname.endsWith('/')) {
+      return 'prefix';  
+    }
+    // それ以外は完全一致
+    return 'exact';
+  } catch (e) {
+    // URL解析に失敗した場合はプレフィックスマッチにフォールバック
+    return 'prefix';
+  }
+}
+
+// 除外条件とのマッチング
+function matchesExclusion(currentUrl, exclusion) {
+  try {
+    const currentUrlObj = new URL(currentUrl);
+    const excludeUrlObj = new URL(exclusion.url);
+    
+    switch (exclusion.type) {
+      case 'exact':
+        // 完全一致（クエリパラメータとフラグメントは除外）
+        return (currentUrlObj.origin + currentUrlObj.pathname) === 
+               (excludeUrlObj.origin + excludeUrlObj.pathname);
+               
+      case 'domain':
+        // ドメインレベルマッチング（サブドメインも含む）
+        return currentUrlObj.hostname === excludeUrlObj.hostname ||
+               currentUrlObj.hostname.endsWith('.' + excludeUrlObj.hostname);
+               
+      case 'prefix':
+        // プレフィックスマッチング（より厳密に）
+        return currentUrlObj.origin === excludeUrlObj.origin &&
+               currentUrlObj.pathname.startsWith(excludeUrlObj.pathname);
+               
+      default:
+        // フォールバック: 従来のstartsWith動作
+        return currentUrl.startsWith(exclusion.url);
+    }
+  } catch (e) {
+    // URL解析に失敗した場合は従来のstartsWith動作にフォールバック
+    console.warn('Fontify: URL parsing failed, using fallback matching:', e);
+    return currentUrl.startsWith(exclusion.url);
+  }
+}
+
 // ストレージからWebフォントURLと除外リストを取得し、除外対象でなければフォントを適用
 (async function() {
   const url = location.href;
@@ -22,7 +97,7 @@ if (typeof browser === 'undefined') {
   if (!isEnabled) return;
 
   // 除外URLに一致する場合は何もしない
-  if (excludeUrls.some(ex => url.startsWith(ex))) return;
+  if (isUrlExcluded(url, excludeUrls)) return;
 
   if (fontUrl) {
     // フォントキャッシュ取得・保存関数
