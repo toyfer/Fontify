@@ -169,11 +169,44 @@ function matchesExclusion(currentUrl, exclusion) {
       style.id = 'fontify-custom-font';
       
       // より高い優先度を確保するため、styleをheadの最後に挿入し、より具体的なセレクターを使用
+      // アイコンフォントを除外するパターンを定義
+      const iconExclusions = [
+        // Font Awesome
+        ':not([class*="fa-"])',
+        ':not([class*="fas "])',
+        ':not([class*="far "])', 
+        ':not([class*="fab "])',
+        ':not([class*="fal "])',
+        // Material Icons
+        ':not(.material-icons)',
+        ':not(.material-icons-outlined)',
+        ':not(.material-icons-round)',
+        ':not(.material-icons-sharp)',
+        ':not(.material-icons-two-tone)',
+        // Bootstrap/Glyphicons
+        ':not([class*="glyphicon"])',
+        ':not([class*="bi-"])',
+        // General icon patterns
+        ':not([class*="icon-"])',
+        ':not([class*="icon "])',
+        ':not(.icon)',
+        // Google/Microsoft specific patterns
+        ':not([class*="google-symbols"])',
+        ':not([class*="ms-Icon"])',
+        // Common data attributes for icons
+        ':not([data-icon])',
+        ':not([data-glyph])'
+      ].join('');
+      
       const specificSelectors = [
-        'html *',
-        'body *', 
-        'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'a', 'ul', 'li', 'table', 'td', 'th', 'form', 'input', 'button'
+        `html *${iconExclusions}`,
+        `body *${iconExclusions}`,
+        `div${iconExclusions}`, `span${iconExclusions}`, `p${iconExclusions}`, 
+        `h1${iconExclusions}`, `h2${iconExclusions}`, `h3${iconExclusions}`, 
+        `h4${iconExclusions}`, `h5${iconExclusions}`, `h6${iconExclusions}`,
+        `a${iconExclusions}`, `ul${iconExclusions}`, `li${iconExclusions}`, 
+        `table${iconExclusions}`, `td${iconExclusions}`, `th${iconExclusions}`, 
+        `form${iconExclusions}`, `input${iconExclusions}`, `button${iconExclusions}`
       ].join(', ');
       
       if (fontDataUrl) {
