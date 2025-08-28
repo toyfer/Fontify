@@ -329,6 +329,152 @@
       border-color: var(--primary-color);
       box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
+
+    /* Exclusion Dialog Styles */
+    .exclusion-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .exclusion-modal.show {
+      opacity: 1;
+    }
+
+    .exclusion-dialog {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--surface-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .exclusion-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .exclusion-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .exclusion-option {
+      display: flex;
+      align-items: flex-start;
+      padding: 0.75rem;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--background-color);
+    }
+
+    .exclusion-option:hover {
+      border-color: var(--primary-color);
+      background: var(--primary-color-light, #f0f7ff);
+    }
+
+    .exclusion-option.selected {
+      border-color: var(--primary-color);
+      background: var(--primary-color-light, #f0f7ff);
+    }
+
+    .exclusion-radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-color);
+      border-radius: 50%;
+      margin-right: 0.75rem;
+      margin-top: 0.125rem;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .exclusion-option.selected .exclusion-radio {
+      border-color: var(--primary-color);
+      background: var(--primary-color);
+    }
+
+    .exclusion-option.selected .exclusion-radio::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      background: white;
+      border-radius: 50%;
+    }
+
+    .exclusion-option-content {
+      flex: 1;
+    }
+
+    .exclusion-option-label {
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .exclusion-option-description {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      word-break: break-all;
+    }
+
+    .exclusion-buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .exclusion-button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .exclusion-button.primary {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .exclusion-button.primary:hover {
+      background: var(--primary-color-dark, #2563eb);
+    }
+
+    .exclusion-button.secondary {
+      background: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .exclusion-button.secondary:hover {
+      background: var(--text-secondary);
+      color: white;
+    }
   </style>
   <script src="../js/popup.js"></script>
 </head>
@@ -390,6 +536,22 @@
       <button class="control-button btn-secondary" id="openOptions">
         <span>詳細設定を開く</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Exclusion Type Selection Modal -->
+  <div class="exclusion-modal" id="exclusionModal">
+    <div class="exclusion-dialog">
+      <div class="exclusion-title">除外範囲を選択してください</div>
+      
+      <div class="exclusion-options" id="exclusionOptions">
+        <!-- Options will be populated by JavaScript -->
+      </div>
+      
+      <div class="exclusion-buttons">
+        <button class="exclusion-button secondary" id="exclusionCancel">キャンセル</button>
+        <button class="exclusion-button primary" id="exclusionConfirm">確定</button>
+      </div>
     </div>
   </div>
 
