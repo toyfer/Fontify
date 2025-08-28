@@ -526,49 +526,136 @@ document.addEventListener('DOMContentLoaded', async () => {
         const urlObj = new URL(currentUrl);
         const domain = urlObj.hostname;
         const path = urlObj.pathname;
-        const pathParts = path.split('/');
-        const directory = pathParts.slice(0, -1).join('/') + '/';
         
+        // Focus on the two main exclusion types as requested in the issue
         const options = [
           {
             type: 'exact',
             label: 'このページのみ',
-            description: `${urlObj.pathname}`,
+            description: `${urlObj.origin}${path}`,
             recommended: path !== '/' && !path.endsWith('/')
-          },
-          {
-            type: 'prefix', 
-            label: 'このディレクトリ以下',
-            description: directory,
-            recommended: directory !== '/' && pathParts.length > 2
           },
           {
             type: 'domain',
             label: 'このサイト全体',
-            description: domain,
-            recommended: false
+            description: `${domain} のすべてのページ`,
+            recommended: path === '/' || path.endsWith('/')
           }
         ];
         
-        // 最も適切なオプションを推奨として選択
-        const recommended = options.find(opt => opt.recommended) || options[0];
+        // Show modal dialog
+        showExclusionModal(options, resolve);
         
-        // シンプルな確認: 最も適切なオプションを提案
-        const message = `除外範囲を選択してください:\n\n` +
-                       `推奨: ${recommended.label} (${recommended.description})\n\n` +
-                       `OK = 推奨設定\nキャンセル = 中止`;
-        
-        if (confirm(message)) {
-          resolve(recommended.type);
-        } else {
-          resolve(null);
-        }
       } catch (error) {
         console.error('Error in exclusion type dialog:', error);
         // エラー時はページ単位除外にフォールバック
         resolve('exact');
       }
     });
+  }
+
+  // Show exclusion modal dialog
+  function showExclusionModal(options, resolveCallback) {
+    const modal = document.getElementById('exclusionModal');
+    const optionsContainer = document.getElementById('exclusionOptions');
+    const confirmButton = document.getElementById('exclusionConfirm');
+    const cancelButton = document.getElementById('exclusionCancel');
+    
+    let selectedType = null;
+    
+    // Clear previous options
+    optionsContainer.innerHTML = '';
+    
+    // Create option elements
+    options.forEach((option, index) => {
+      const optionElement = document.createElement('div');
+      optionElement.className = 'exclusion-option';
+      optionElement.dataset.type = option.type;
+      
+      // Select recommended option by default
+      if (option.recommended) {
+        optionElement.classList.add('selected');
+        selectedType = option.type;
+      }
+      
+      optionElement.innerHTML = `
+        <div class="exclusion-radio"></div>
+        <div class="exclusion-option-content">
+          <div class="exclusion-option-label">${option.label}</div>
+          <div class="exclusion-option-description">${option.description}</div>
+        </div>
+      `;
+      
+      optionElement.addEventListener('click', () => {
+        // Remove selection from all options
+        optionsContainer.querySelectorAll('.exclusion-option').forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        
+        // Add selection to clicked option
+        optionElement.classList.add('selected');
+        selectedType = option.type;
+      });
+      
+      optionsContainer.appendChild(optionElement);
+    });
+    
+    // If no option was recommended, select the first one
+    if (!selectedType && options.length > 0) {
+      optionsContainer.querySelector('.exclusion-option').classList.add('selected');
+      selectedType = options[0].type;
+    }
+    
+    // Handle confirm button
+    const handleConfirm = () => {
+      hideModal();
+      resolveCallback(selectedType);
+    };
+    
+    // Handle cancel button
+    const handleCancel = () => {
+      hideModal();
+      resolveCallback(null);
+    };
+    
+    // Handle modal background click
+    const handleBackgroundClick = (e) => {
+      if (e.target === modal) {
+        handleCancel();
+      }
+    };
+    
+    // Handle ESC key
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      }
+    };
+    
+    // Hide modal and clean up
+    const hideModal = () => {
+      modal.classList.remove('show');
+      document.removeEventListener('keydown', handleKeyDown);
+      modal.removeEventListener('click', handleBackgroundClick);
+      confirmButton.removeEventListener('click', handleConfirm);
+      cancelButton.removeEventListener('click', handleCancel);
+      
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, 200);
+    };
+    
+    // Set up event listeners
+    confirmButton.addEventListener('click', handleConfirm);
+    cancelButton.addEventListener('click', handleCancel);
+    modal.addEventListener('click', handleBackgroundClick);
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Show modal
+    modal.style.display = 'block';
+    setTimeout(() => {
+      modal.classList.add('show');
+    }, 10);
   }
 
   // Handle open options
