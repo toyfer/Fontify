@@ -177,12 +177,13 @@ function matchesExclusion(currentUrl, exclusion) {
         ':not([class*="far "])', 
         ':not([class*="fab "])',
         ':not([class*="fal "])',
-        // Material Icons
+        // Material Icons (Google)
         ':not(.material-icons)',
         ':not(.material-icons-outlined)',
         ':not(.material-icons-round)',
         ':not(.material-icons-sharp)',
         ':not(.material-icons-two-tone)',
+        ':not([class*="material-icons"])',
         // Bootstrap/Glyphicons
         ':not([class*="glyphicon"])',
         ':not([class*="bi-"])',
@@ -190,9 +191,16 @@ function matchesExclusion(currentUrl, exclusion) {
         ':not([class*="icon-"])',
         ':not([class*="icon "])',
         ':not(.icon)',
-        // Google/Microsoft specific patterns
+        // Google specific patterns (more comprehensive)
         ':not([class*="google-symbols"])',
+        ':not([class*="google-material-icons"])',
+        ':not([class*="google-icon"])',
+        ':not(.google-material-icons-extended)',
+        // Microsoft specific patterns
         ':not([class*="ms-Icon"])',
+        ':not([class*="fluent-icon"])',
+        ':not(.fluent-icon)',
+        ':not([class*="fabric-icon"])',
         // Common data attributes for icons
         ':not([data-icon])',
         ':not([data-glyph])'
